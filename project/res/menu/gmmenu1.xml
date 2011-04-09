@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+	<item android:title="@string/update" android:id="@+id/upd_menu_btn" android:icon="@drawable/refresh"></item>
+<item android:title="@string/lang" android:id="@+id/lang_menu_btn" android:icon="@drawable/flag"> 
+<menu>
+			<item android:title="@string/langru" android:id="@+id/langru_menu_btn"></item>
+			<item android:title="@string/langen" android:id="@+id/langen_menu_btn"></item>
+			<item android:id="@+id/langall_menu_btn" android:title="@string/alang"></item>
+</menu>
+
+
+</item>
+	
+	<item android:title="@string/filtr" android:id="@+id/flt_menu_btn" android:icon="@drawable/filter">
+		<menu>
+			<item android:id="@+id/inst_menu_btn" android:title="@string/installed" android:icon="@drawable/installed"></item>
+			<item android:title="@string/isnew" android:id="@+id/isnew_menu_btn"></item>
+			<item android:title="@string/isupd" android:id="@+id/isupd_menu_btn"></item>
+			<item android:title="@string/all" android:id="@+id/all_menu_btn"></item>
+		</menu>
+	</item>
+
+
+
+
+</menu>
