@@ -1,23 +1,22 @@
 /*
-    SDL - Simple DirectMedia Layer
-    Copyright (C) 1997-2010 Sam Lantinga
+  Simple DirectMedia Layer
+  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    Sam Lantinga
-    slouken@libsdl.org
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
 */
 
 /**
@@ -54,6 +53,7 @@ extern "C" {
 /*@{*/
 #define SDL_PREALLOC        0x00000001  /**< Surface uses preallocated memory */
 #define SDL_RLEACCEL        0x00000002  /**< Surface is RLE encoded */
+#define SDL_DONTFREE        0x00000004  /**< Surface is referenced internally */
 /*@}*//*Surface flags*/
 
 /**
@@ -87,9 +87,6 @@ typedef struct SDL_Surface
 
     /** info for fast blit mapping to other surfaces */
     struct SDL_BlitMap *map;    /**< Private */
-
-    /** format version, bumped at every change to invalidate blit maps */
-    int format_version;         /**< Private */
 
     /** Reference count -- used when freeing surface */
     int refcount;               /**< Read-mostly */
@@ -353,6 +350,8 @@ extern DECLSPEC void SDLCALL SDL_GetClipRect(SDL_Surface * surface,
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_ConvertSurface
     (SDL_Surface * src, SDL_PixelFormat * fmt, Uint32 flags);
+extern DECLSPEC SDL_Surface *SDLCALL SDL_ConvertSurfaceFormat
+    (SDL_Surface * src, Uint32 pixel_format, Uint32 flags);
 
 /**
  * \brief Copy a block of pixels of one format to another format
@@ -376,7 +375,7 @@ extern DECLSPEC int SDLCALL SDL_ConvertPixels(int width, int height,
 extern DECLSPEC int SDLCALL SDL_FillRect
     (SDL_Surface * dst, const SDL_Rect * rect, Uint32 color);
 extern DECLSPEC int SDLCALL SDL_FillRects
-    (SDL_Surface * dst, const SDL_Rect ** rects, int count, Uint32 color);
+    (SDL_Surface * dst, const SDL_Rect * rects, int count, Uint32 color);
 
 /**
  *  Performs a fast blit from the source surface to the destination surface.
@@ -434,22 +433,6 @@ extern DECLSPEC int SDLCALL SDL_FillRects
         source colour key.
     \endverbatim
  *  
- *  If either of the surfaces were in video memory, and the blit returns -2,
- *  the video memory was lost, so it should be reloaded with artwork and 
- *  re-blitted:
- *  @code
- *  while ( SDL_BlitSurface(image, imgrect, screen, dstrect) == -2 ) {
- *      while ( SDL_LockSurface(image) < 0 )
- *          Sleep(10);
- *      -- Write image pixels to image->pixels --
- *      SDL_UnlockSurface(image);
- *  }
- *  @endcode
- *  
- *  This happens under DirectX 5.0 when the system switches away from your
- *  fullscreen application.  The lock will also fail until you have access
- *  to the video memory again.
- *  
  *  You should call SDL_BlitSurface() unless you know exactly how SDL
  *  blitting works internally and how to use the other blit functions.
  */
@@ -481,6 +464,25 @@ extern DECLSPEC int SDLCALL SDL_SoftStretch(SDL_Surface * src,
                                             const SDL_Rect * srcrect,
                                             SDL_Surface * dst,
                                             const SDL_Rect * dstrect);
+
+#define SDL_BlitScaled SDL_UpperBlitScaled
+
+/**
+ *  This is the public scaled blit function, SDL_BlitScaled(), and it performs
+ *  rectangle validation and clipping before passing it to SDL_LowerBlitScaled()
+ */
+extern DECLSPEC int SDLCALL SDL_UpperBlitScaled
+    (SDL_Surface * src, const SDL_Rect * srcrect,
+    SDL_Surface * dst, SDL_Rect * dstrect);
+
+/**
+ *  This is a semi-private blit function and it performs low-level surface
+ *  scaled blitting only.
+ */
+extern DECLSPEC int SDLCALL SDL_LowerBlitScaled
+    (SDL_Surface * src, SDL_Rect * srcrect,
+    SDL_Surface * dst, SDL_Rect * dstrect);
+
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus

@@ -198,13 +198,6 @@ if test x$enable_libc = xyes; then
 
     dnl Check for typedefs, structures, etc.
     AC_TYPE_SIZE_T
-    if test x$ac_cv_header_inttypes_h = xyes -o x$ac_cv_header_stdint_h = xyes; then
-        AC_CHECK_TYPE(int64_t)
-        if test x$ac_cv_type_int64_t = xyes; then
-            AC_DEFINE(SDL_HAS_64BIT_TYPE)
-        fi
-        have_inttypes=yes
-    fi
 
     dnl Check for defines
     AC_CHECK_DEFINE(M_PI, math.h)
@@ -245,48 +238,6 @@ if test x$enable_libc = xyes; then
 fi
 
 AC_CHECK_SIZEOF(void*)
-if test x$have_inttypes != xyes; then
-    AC_CHECK_SIZEOF(char, 1)
-    AC_CHECK_SIZEOF(short, 2)
-    AC_CHECK_SIZEOF(int, 4)
-    AC_CHECK_SIZEOF(long, 4)
-    AC_CHECK_SIZEOF(long long, 8)
-    if test x$ac_cv_sizeof_char = x1; then
-        AC_DEFINE(int8_t, signed char)
-        AC_DEFINE(uint8_t, unsigned char)
-    fi
-    if test x$ac_cv_sizeof_short = x2; then
-        AC_DEFINE(int16_t, signed short)
-        AC_DEFINE(uint16_t, unsigned short)
-    else
-        if test x$ac_cv_sizeof_int = x2; then
-            AC_DEFINE(int16_t, signed int)
-            AC_DEFINE(uint16_t, unsigned int)
-        fi
-    fi
-    if test x$ac_cv_sizeof_int = x4; then
-        AC_DEFINE(int32_t, signed int)
-        AC_DEFINE(uint32_t, unsigned int)
-    else
-        if test x$ac_cv_sizeof_long = x4; then
-            AC_DEFINE(int32_t, signed long)
-            AC_DEFINE(uint32_t, unsigned long)
-        fi
-    fi
-    if test x$ac_cv_sizeof_long = x8; then
-        AC_DEFINE(int64_t, signed long)
-        AC_DEFINE(uint64_t, unsigned long)
-        AC_DEFINE(SDL_HAS_64BIT_TYPE)
-    else
-        if test x$ac_cv_sizeof_long_long = x8; then
-            AC_DEFINE(int64_t, signed long long)
-            AC_DEFINE(uint64_t, unsigned long long)
-            AC_DEFINE(SDL_HAS_64BIT_TYPE)
-        fi
-    fi
-    AC_DEFINE(size_t, unsigned int)
-    AC_DEFINE(uintptr_t, unsigned long)
-fi
 
 dnl See whether we can use gcc atomic operations on this architecture
 AC_ARG_ENABLE(gcc-atomics,
@@ -362,6 +313,12 @@ AC_HELP_STRING([--enable-video], [Enable the video subsystem [[default=yes]]]),
 if test x$enable_video != xyes; then
     AC_DEFINE(SDL_VIDEO_DISABLED)
 fi
+AC_ARG_ENABLE(render,
+AC_HELP_STRING([--enable-render], [Enable the render subsystem [[default=yes]]]),
+              , enable_render=yes)
+if test x$enable_render != xyes; then
+    AC_DEFINE(SDL_RENDER_DISABLED)
+fi
 AC_ARG_ENABLE(events,
 AC_HELP_STRING([--enable-events], [Enable the events subsystem [[default=yes]]]),
               , enable_events=yes)
@@ -421,6 +378,12 @@ AC_HELP_STRING([--enable-cpuinfo], [Enable the cpuinfo subsystem [[default=yes]]
               , enable_cpuinfo=yes)
 if test x$enable_cpuinfo != xyes; then
     AC_DEFINE(SDL_CPUINFO_DISABLED)
+fi
+AC_ARG_ENABLE(atomic,
+AC_HELP_STRING([--enable-atomic], [Enable the atomic operations [[default=yes]]]),
+              , enable_atomic=yes)
+if test x$enable_atomic != xyes; then
+    AC_DEFINE(SDL_ATOMIC_DISABLED)
 fi
 AC_ARG_ENABLE(assembly,
 AC_HELP_STRING([--enable-assembly], [Enable assembly routines [[default=yes]]]),
@@ -746,68 +709,6 @@ AC_HELP_STRING([--enable-alsa-shared], [dynamically load ALSA audio support [[de
     fi
 }
 
-dnl Check whether we want to use IRIX 6.5+ native audio or not
-CheckDMEDIA()
-{
-    if test x$enable_audio = xyes; then
-        AC_MSG_CHECKING(for dmedia audio support)
-        have_dmedia=no
-        AC_TRY_COMPILE([
-          #include <dmedia/audio.h>
-        ],[
-          ALport audio_port;
-        ],[
-        have_dmedia=yes
-        ])
-        AC_MSG_RESULT($have_dmedia)
-        # Set up files for the audio library
-        if test x$have_dmedia = xyes; then
-            AC_DEFINE(SDL_AUDIO_DRIVER_DMEDIA)
-            SOURCES="$SOURCES $srcdir/src/audio/dmedia/*.c"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -laudio"
-            have_audio=yes
-        fi
-    fi
-}
-
-dnl Check whether we want to use Tru64 UNIX native audio or not
-CheckMME()
-{
-    dnl Make sure we are running on an Tru64 UNIX
-    case $ARCH in
-        osf)
-            ;;
-        *)
-            return
-            ;;
-    esac
-    if test x$enable_audio = xyes; then
-        AC_MSG_CHECKING(for MME audio support)
-        MME_CFLAGS="-I/usr/include/mme"
-        MME_LIBS="-lmme"
-        have_mme=no
-        save_CFLAGS="$CFLAGS"
-        CFLAGS="$CFLAGS $MME_CFLAGS"
-        AC_TRY_COMPILE([
-          #include <mme_api.h>
-        ],[
-          HWAVEOUT sound;
-        ],[
-        have_mme=yes
-        ])
-        CFLAGS="$save_CFLAGS"
-        AC_MSG_RESULT($have_mme)
-        # Set up files for the audio library
-        if test x$have_mme = xyes; then
-            AC_DEFINE(SDL_AUDIO_DRIVER_MMEAUDIO)
-            SOURCES="$SOURCES $srcdir/src/audio/mme/*.c"
-            EXTRA_CFLAGS="$EXTRA_CFLAGS $MME_CFLAGS"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS $MME_LIBS"
-            have_audio=yes
-        fi
-    fi
-}
-
 dnl Find the ESD includes and libraries
 CheckESD()
 {
@@ -961,12 +862,6 @@ AC_HELP_STRING([--enable-nas], [support the NAS audio API [[default=yes]]]),
             NAS_CFLAGS="-I/usr/X11R6/include/"
             NAS_LIBS="-L/usr/X11R6/lib -laudio -lXt"
 
-        dnl On IRIX, the NAS includes are in a different directory,
-        dnl and libnas must be explicitly linked in
-
-        elif test -r /usr/freeware/include/nas/audiolib.h; then
-            have_nas=yes
-            NAS_LIBS="-lnas -lXt"
         fi
 
         AC_MSG_RESULT($have_nas)
@@ -1079,34 +974,28 @@ AC_HELP_STRING([--enable-x11-shared], [dynamically load X11 support [[default=ma
                           , enable_x11_shared=maybe)
 
             case "$host" in
-                *-*-darwin*) # Latest Mac OS X actually ships with Xrandr/Xrender libs...
+                *-*-darwin*)
                     x11_symbols_private=yes
                     x11_lib='/usr/X11R6/lib/libX11.6.dylib'
                     x11ext_lib='/usr/X11R6/lib/libXext.6.dylib'
-                    xrender_lib='/usr/X11R6/lib/libXrender.1.dylib'
-                    xrandr_lib='/usr/X11R6/lib/libXrandr.2.dylib'
+                    xcursor_lib='/usr/X11R6/lib/libXcursor.1.dylib'
+                    xinerama_lib='/usr/X11R6/lib/libXinerama.1.dylib'
                     xinput_lib='/usr/X11R6/lib/libXi.6.dylib'
-                    xss_lib='/usr/X11R6/lib/libXss.6.dylib'
-                    xdamage_lib='/usr/X11R6/lib/libXdamage.1.dylib'
-                    xfixes_lib='/usr/X11R6/lib/libXfixes.3.dylib'
-                    ;;
-                *-*-osf*)
-                    x11_lib='libX11.so'
-                    x11ext_lib='libXext.so'
-                    ;;
-                *-*-irix*) # IRIX 6.5 requires that we use /usr/lib32
-                    x11_lib='libX11.so'
-                    x11ext_lib='libXext.so'
+                    xrandr_lib='/usr/X11R6/lib/libXrandr.2.dylib'
+                    xrender_lib='/usr/X11R6/lib/libXrender.1.dylib'
+                    xss_lib='/usr/X11R6/lib/libXss.1.dylib'
+                    xvidmode_lib='/usr/X11R6/lib/libXxf86vm.1.dylib'
                     ;;
                 *)
                     x11_lib=[`find_lib "libX11.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
                     x11ext_lib=[`find_lib "libXext.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
-                    xrender_lib=[`find_lib "libXrender.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
-                    xrandr_lib=[`find_lib "libXrandr.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+                    xcursor_lib=[`find_lib "libXcursor.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+                    xinerama_lib=[`find_lib "libXinerama.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
                     xinput_lib=[`find_lib "libXi.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+                    xrandr_lib=[`find_lib "libXrandr.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+                    xrender_lib=[`find_lib "libXrender.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
                     xss_lib=[`find_lib "libXss.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
-                    xdamage_lib=[`find_lib "libXdamage.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
-                    xfixes_lib=[`find_lib "libXfixes.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+                    xvidmode_lib=[`find_lib "libXxf86vm.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
                     ;;
             esac
 
@@ -1118,7 +1007,6 @@ AC_HELP_STRING([--enable-x11-shared], [dynamically load X11 support [[default=ma
 
             AC_DEFINE(SDL_VIDEO_DRIVER_X11)
             SOURCES="$SOURCES $srcdir/src/video/x11/*.c"
-            SOURCES="$SOURCES $srcdir/src/video/Xext/XmuStdCmap/*.c"
             EXTRA_CFLAGS="$EXTRA_CFLAGS $X_CFLAGS"
 
             if test x$enable_x11_shared = xmaybe; then
@@ -1147,66 +1035,59 @@ AC_HELP_STRING([--enable-x11-shared], [dynamically load X11 support [[default=ma
             fi
             have_video=yes
 
-            AC_ARG_ENABLE(video-x11-vm,
-AC_HELP_STRING([--enable-video-x11-vm], [use X11 VM extension for fullscreen [[default=yes]]]),
-                          , enable_video_x11_vm=yes)
-            if test x$enable_video_x11_vm = xyes; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_VIDMODE)
-                SOURCES="$SOURCES $srcdir/src/video/Xext/Xxf86vm/*.c"
+            AC_ARG_ENABLE(video-x11-xcursor,
+AC_HELP_STRING([--enable-video-x11-xcursor], [enable X11 Xcursor support [[default=yes]]]),
+                            , enable_video_x11_xcursor=yes)
+            if test x$enable_video_x11_xcursor = xyes; then
+                definitely_enable_video_x11_xcursor=no
+                AC_CHECK_HEADER(X11/Xcursor/Xcursor.h,
+                                have_xcursor_h_hdr=yes,
+                                have_xcursor_h_hdr=no,
+                                [#include <X11/Xlib.h>
+                                ])
+                if test x$have_xcursor_h_hdr = xyes; then
+                    if test x$enable_x11_shared = xyes && test x$xcursor_lib != x ; then
+                        echo "-- dynamic libXcursor -> $xcursor_lib"
+                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XCURSOR, "$xcursor_lib")
+                        definitely_enable_video_x11_xcursor=yes
+                    else
+                        AC_CHECK_LIB(Xcursor, XcursorImageCreate, have_xcursor_lib=yes)
+                        if test x$have_xcursor_lib = xyes ; then
+                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXcursor"
+                            definitely_enable_video_x11_xcursor=yes
+                        fi
+                    fi
+                fi
             fi
-            AC_ARG_ENABLE(video-x11-xv,
-AC_HELP_STRING([--enable-video-x11-xv], [use X11 XvImage extension for video [[default=yes]]]),
-                          , enable_video_x11_xv=yes)
-            if test x$enable_video_x11_xv = xyes; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XV)
-                SOURCES="$SOURCES $srcdir/src/video/Xext/Xv/*.c"
+            if test x$definitely_enable_video_x11_xcursor = xyes; then
+                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XCURSOR)
             fi
             AC_ARG_ENABLE(video-x11-xinerama,
 AC_HELP_STRING([--enable-video-x11-xinerama], [enable X11 Xinerama support [[default=yes]]]),
                             , enable_video_x11_xinerama=yes)
             if test x$enable_video_x11_xinerama = xyes; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XINERAMA)
-                SOURCES="$SOURCES $srcdir/src/video/Xext/Xinerama/*.c"
-            fi
-            AC_ARG_ENABLE(video-x11-xshape,
-AC_HELP_STRING([--enable-video-x11-xshape], [enable X11 XShape support [[default=yes]]]),
-                            , enable_video_x11_xshape=yes)
-            if test x$enable_video_x11_xshape = xyes; then
-                AC_CHECK_HEADER(X11/extensions/shape.h,
-                                have_shape_h_hdr=yes,
-                                have_shape_h_hdr=no,
+                definitely_enable_video_x11_xinerama=no
+                AC_CHECK_HEADER(X11/extensions/Xinerama.h,
+                                have_xinerama_h_hdr=yes,
+                                have_xinerama_h_hdr=no,
                                 [#include <X11/Xlib.h>
                                 ])
-                if test x$have_shape_h_hdr = xyes; then
-                    AC_DEFINE(SDL_VIDEO_DRIVER_X11_XSHAPE)
-                fi
-            fi
-            AC_ARG_ENABLE(video-x11-xrandr,
-AC_HELP_STRING([--enable-video-x11-xrandr], [enable X11 Xrandr extension for fullscreen [[default=yes]]]),
-                            , enable_video_x11_xrandr=yes)
-            if test x$enable_video_x11_xrandr = xyes; then
-                definitely_enable_video_x11_xrandr=no
-                AC_CHECK_HEADER(X11/extensions/Xrandr.h,
-                                have_xrandr_h_hdr=yes,
-                                have_xrandr_h_hdr=no,
-                                [#include <X11/Xlib.h>
-                                ])
-                if test x$have_xrandr_h_hdr = xyes; then
-                    if test x$enable_x11_shared = xyes && test x$xrandr_lib != x ; then
-                        echo "-- dynamic libXrandr -> $xrandr_lib"
-                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XRANDR, "$xrandr_lib")
-                        definitely_enable_video_x11_xrandr=yes
+                if test x$have_xinerama_h_hdr = xyes; then
+                    if test x$enable_x11_shared = xyes && test x$xinerama_lib != x ; then
+                        echo "-- dynamic libXinerama -> $xinerama_lib"
+                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XINERAMA, "$xinerama_lib")
+                        definitely_enable_video_x11_xinerama=yes
                     else
-                        AC_CHECK_LIB(Xrandr, XRRQueryExtension, have_xrandr_lib=yes)
-                        if test x$have_xrandr_lib = xyes ; then
-                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXrandr"
-                            definitely_enable_video_x11_xrandr=yes
+                        AC_CHECK_LIB(Xinerama, XineramaQueryExtension, have_xinerama_lib=yes)
+                        if test x$have_xinerama_lib = xyes ; then
+                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXinerama"
+                            definitely_enable_video_x11_xinerama=yes
                         fi
                     fi
                 fi
             fi
-            if test x$definitely_enable_video_x11_xrandr = xyes; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XRANDR)
+            if test x$definitely_enable_video_x11_xinerama = xyes; then
+                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XINERAMA)
             fi
             AC_ARG_ENABLE(video-x11-xinput,
 AC_HELP_STRING([--enable-video-x11-xinput], [enable X11 XInput extension for manymouse, tablets, etc [[default=yes]]]),
@@ -1235,6 +1116,33 @@ AC_HELP_STRING([--enable-video-x11-xinput], [enable X11 XInput extension for man
             if test x$definitely_enable_video_x11_xinput = xyes; then
                 AC_DEFINE(SDL_VIDEO_DRIVER_X11_XINPUT)
             fi
+            AC_ARG_ENABLE(video-x11-xrandr,
+AC_HELP_STRING([--enable-video-x11-xrandr], [enable X11 Xrandr extension for fullscreen [[default=yes]]]),
+                            , enable_video_x11_xrandr=yes)
+            if test x$enable_video_x11_xrandr = xyes; then
+                definitely_enable_video_x11_xrandr=no
+                AC_CHECK_HEADER(X11/extensions/Xrandr.h,
+                                have_xrandr_h_hdr=yes,
+                                have_xrandr_h_hdr=no,
+                                [#include <X11/Xlib.h>
+                                ])
+                if test x$have_xrandr_h_hdr = xyes; then
+                    if test x$enable_x11_shared = xyes && test x$xrandr_lib != x ; then
+                        echo "-- dynamic libXrandr -> $xrandr_lib"
+                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XRANDR, "$xrandr_lib")
+                        definitely_enable_video_x11_xrandr=yes
+                    else
+                        AC_CHECK_LIB(Xrandr, XRRQueryExtension, have_xrandr_lib=yes)
+                        if test x$have_xrandr_lib = xyes ; then
+                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXrandr"
+                            definitely_enable_video_x11_xrandr=yes
+                        fi
+                    fi
+                fi
+            fi
+            if test x$definitely_enable_video_x11_xrandr = xyes; then
+                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XRANDR)
+            fi
             AC_ARG_ENABLE(video-x11-scrnsaver,
 AC_HELP_STRING([--enable-video-x11-scrnsaver], [enable X11 screensaver extension [[default=yes]]]),
                             , enable_video_x11_scrnsaver=yes)
@@ -1259,70 +1167,47 @@ AC_HELP_STRING([--enable-video-x11-scrnsaver], [enable X11 screensaver extension
                 fi
             fi
             if test x$definitely_enable_video_x11_scrnsaver = xyes; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_SCRNSAVER)
+                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XSCRNSAVER)
             fi
-            AC_ARG_ENABLE(video-x11-xrender,
-AC_HELP_STRING([--enable-video-x11-xrender], [enable X11 Xrender extension [[default=yes]]]),
-                            , enable_video_x11_xrender=yes)
-            if test x$enable_video_x11_xrender = xyes; then
-                AC_CHECK_HEADER(X11/extensions/Xrender.h,
-                                have_xrender_h_hdr=yes,
-                                have_xrender_h_hdr=no,
+            AC_ARG_ENABLE(video-x11-xshape,
+AC_HELP_STRING([--enable-video-x11-xshape], [enable X11 XShape support [[default=yes]]]),
+                            , enable_video_x11_xshape=yes)
+            if test x$enable_video_x11_xshape = xyes; then
+                AC_CHECK_HEADER(X11/extensions/shape.h,
+                                have_shape_h_hdr=yes,
+                                have_shape_h_hdr=no,
                                 [#include <X11/Xlib.h>
                                 ])
-                if test x$have_xrender_h_hdr = xyes; then
-                    if test x$enable_x11_shared = xyes && test x$xrender_lib != x ; then
-                        echo "-- dynamic libXrender -> $xrender_lib"
-                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XRENDER, "$xrender_lib")
-                        definitely_enable_video_x11_xrender=yes
+                if test x$have_shape_h_hdr = xyes; then
+                    AC_DEFINE(SDL_VIDEO_DRIVER_X11_XSHAPE)
+                fi
+            fi
+            AC_ARG_ENABLE(video-x11-vm,
+AC_HELP_STRING([--enable-video-x11-vm], [use X11 VM extension for fullscreen [[default=yes]]]),
+                            , enable_video_x11_vm=yes)
+            if test x$enable_video_x11_vm = xyes; then
+                definitely_enable_video_x11_vm=no
+                AC_CHECK_HEADER(X11/extensions/xf86vmode.h,
+                                have_vm_h_hdr=yes,
+                                have_vm_h_hdr=no,
+                                [#include <X11/Xlib.h>
+                                ])
+                if test x$have_vm_h_hdr = xyes; then
+                    if test x$enable_x11_shared = xyes && test x$xvidmode_lib != x ; then
+                        echo "-- dynamic libXxf86vm -> $xvidmode_lib"
+                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XVIDMODE, "$xvidmode_lib")
+                        definitely_enable_video_x11_vm=yes
                     else
-                        AC_CHECK_LIB(Xrender, XRenderQueryExtension, have_xrender_lib=yes)
-                        if test x$have_xrender_lib = xyes ; then
-                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXrender"
-                            definitely_enable_video_x11_xrender=yes
+                        AC_CHECK_LIB(Xxf86vm, XF86VidModeQueryVersion, have_vm_lib=yes)
+                        if test x$have_vm_lib = xyes ; then
+                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXxf86vm"
+                            definitely_enable_video_x11_vm=yes
                         fi
                     fi
                 fi
             fi
-            if test x$definitely_enable_video_x11_xrender = xyes; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XRENDER)
-            fi
-            AC_ARG_ENABLE(video-x11-xdamage-xfixes,
-AC_HELP_STRING([--enable-video-x11-xdamage-xfixes], [enable X11 Xdamage and Xfixes extensions [[default=yes]]]),
-                            , enable_video_x11_xdamage=yes)
-            if test x$enable_video_x11_xdamage = xyes && test x$definitely_enable_video_x11_xrender = xyes ; then
-                AC_CHECK_HEADER(X11/extensions/Xdamage.h,
-                                have_xdamage_h_hdr=yes,
-                                have_xdamage_h_hdr=no,
-                                [#include <X11/Xlib.h>
-                                ])
-                AC_CHECK_HEADER(X11/extensions/Xfixes.h,
-                                have_xfixes_h_hdr=yes,
-                                have_xfixes_h_hdr=no,
-                                [#include <X11/Xlib.h>
-                                ])
-                if test x$have_xdamage_h_hdr = xyes && test x$have_xfixes_h_hdr = xyes ; then
-                    if test x$enable_x11_shared = xyes && test x$xdamage_lib != x && test x$xfixes_lib != x ; then
-                        echo "-- dynamic libXdamage -> $xdamage_lib"
-                        echo "-- dynamic libXfixes -> $xfixes_lib"
-                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XDAMAGE, "$xdamage_lib")
-                        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_X11_DYNAMIC_XFIXES, "$xfixes_lib")
-                        definitely_enable_video_x11_xdamage=yes
-                        definitely_enable_video_x11_xfixes=yes
-                    else
-                        AC_CHECK_LIB(Xdamage, XDamageQueryExtension, have_xdamage_lib=yes)
-                        AC_CHECK_LIB(Xfixes, XFixesQueryExtension, have_xfixes_lib=yes)
-                        if test x$have_xdamage_lib = xyes && test x$have_xfixes_lib = xyes ; then
-                            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lXdamage -lXfixes"
-                            definitely_enable_video_x11_xdamage=yes
-                            definitely_enable_video_x11_xfixes=yes
-                        fi
-                    fi
-                fi
-            fi
-            if test x$definitely_enable_video_x11_xdamage = xyes && test x$definitely_enable_video_x11_xfixes = xyes ; then
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XDAMAGE)
-                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XFIXES)
+            if test x$definitely_enable_video_x11_vm = xyes; then
+                AC_DEFINE(SDL_VIDEO_DRIVER_X11_XVIDMODE)
             fi
         fi
     fi
@@ -1376,8 +1261,7 @@ AC_HELP_STRING([--enable-video-directfb], [use DirectFB video driver [[default=n
         video_directfb=no
 
         DIRECTFB_REQUIRED_VERSION=1.0.0
-
-        AC_PATH_PROG(DIRECTFBCONFIG, directfb-config, no)
+        AC_PATH_PROGS(DIRECTFBCONFIG, directfb-config, no, [$prefix/bin:$PATH])
         if test x$DIRECTFBCONFIG = xno; then
             AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
             if test x$PKG_CONFIG != xno; then
@@ -1417,13 +1301,15 @@ AC_HELP_STRING([--enable-directfb-shared], [dynamically load directfb support [[
                               , enable_directfb_shared=yes)
 
             AC_DEFINE(SDL_VIDEO_DRIVER_DIRECTFB)
+            AC_DEFINE(SDL_VIDEO_RENDER_DIRECTFB)
             SOURCES="$SOURCES $srcdir/src/video/directfb/*.c"
             EXTRA_CFLAGS="$EXTRA_CFLAGS $DIRECTFB_CFLAGS"
 
             AC_MSG_CHECKING(for directfb dynamic loading support)
             directfb_shared=no
-            directfb_lib=[`find_lib "libdirectfb.so.*" "$DIRECTFB_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`]
-
+            directfb_lib=[`find_lib "libdirectfb.so.*" "$DIRECTFB_LIBS"`]
+            # | sed 's/.*\/\(.*\)/\1/; q'`]
+AC_MSG_WARN("directfb $directfb_lib")
             if test x$have_loadso != xyes && \
                test x$enable_directfb_shared = xyes; then
                 AC_MSG_WARN([You must have SDL_LoadObject() support for dynamic directfb loading])
@@ -1663,10 +1549,6 @@ AC_HELP_STRING([--enable-pthread-sem], [use pthread semaphores [[default=yes]]])
             pthread_cflags="-D_REENTRANT -Kthread"
             pthread_lib=""
             ;;
-        *-*-irix*)
-            pthread_cflags="-D_SGI_MP_SOURCE"
-            pthread_lib="-lpthread"
-            ;;
         *-*-aix*)
             pthread_cflags="-D_REENTRANT -mthreads"
             pthread_lib="-lpthread"
@@ -1674,14 +1556,6 @@ AC_HELP_STRING([--enable-pthread-sem], [use pthread semaphores [[default=yes]]])
         *-*-hpux11*)
             pthread_cflags="-D_REENTRANT"
             pthread_lib="-L/usr/lib -lpthread"
-            ;;
-        *-*-osf*)
-            pthread_cflags="-D_REENTRANT"
-            if test x$ac_cv_prog_gcc = xyes; then
-                pthread_lib="-lpthread -lrt"
-            else
-                pthread_lib="-lpthread -lexc -lrt"
-            fi
             ;;
         *)
             pthread_cflags="-D_REENTRANT"
@@ -1818,14 +1692,6 @@ CheckWINDOWS()
     have_wince=yes
     ])
     AC_MSG_RESULT($have_wince)
-
-    dnl See if the user wants to redirect standard output to files
-    AC_ARG_ENABLE(stdio-redirect,
-AC_HELP_STRING([--enable-stdio-redirect], [Redirect STDIO to files on Windows [[default=yes]]]),
-                  , enable_stdio_redirect=yes)
-    if test x$enable_stdio_redirect != xyes; then
-        EXTRA_CFLAGS="$EXTRA_CFLAGS -DNO_STDIO_REDIRECT"
-    fi
 }
 
 dnl Find the DirectX includes and libraries
@@ -2050,7 +1916,7 @@ AC_HELP_STRING([--enable-rpath], [use an rpath when linking SDL [[default=yes]]]
 
 dnl Set up the configuration based on the host platform!
 case "$host" in
-    *-*-linux*|*-*-uclinux*|*-*-gnu*|*-*-k*bsd*-gnu|*-*-bsdi*|*-*-freebsd*|*-*-dragonfly*|*-*-netbsd*|*-*-openbsd*|*-*-sysv5*|*-*-solaris*|*-*-hpux*|*-*-irix*|*-*-aix*|*-*-osf*|*-*-minix*)
+    *-*-linux*|*-*-uclinux*|*-*-gnu*|*-*-k*bsd*-gnu|*-*-bsdi*|*-*-freebsd*|*-*-dragonfly*|*-*-netbsd*|*-*-openbsd*|*-*-sysv5*|*-*-solaris*|*-*-hpux*|*-*-aix*|*-*-minix*)
         case "$host" in
             *-*-linux*)         ARCH=linux ;;
             *-*-uclinux*)       ARCH=linux ;;
@@ -2066,9 +1932,7 @@ case "$host" in
             *-*-sysv5*)         ARCH=sysv5 ;;
             *-*-solaris*)       ARCH=solaris ;;
             *-*-hpux*)          ARCH=hpux ;;
-            *-*-irix*)          ARCH=irix ;;
             *-*-aix*)           ARCH=aix ;;
-            *-*-osf*)           ARCH=osf ;;
             *-*-minix*)         ARCH=minix ;;
         esac
         CheckVisibilityHidden
@@ -2077,8 +1941,6 @@ case "$host" in
         CheckDummyAudio
         CheckDLOPEN
         CheckOSS
-        CheckDMEDIA
-        CheckMME
         CheckALSA
         CheckPulseAudio
         CheckARTSC
@@ -2146,14 +2008,6 @@ case "$host" in
                    have_power=yes
                ;;
              esac
-        fi
-        # Set up files for the thread library
-        if test x$enable_threads = xyes -a x$use_pthreads != xyes -a x$use_pth != xyes -a x$ARCH = xirix; then
-            AC_DEFINE(SDL_THREAD_SPROC)
-            SOURCES="$SOURCES $srcdir/src/thread/irix/*.c"
-            SOURCES="$SOURCES $srcdir/src/thread/generic/SDL_sysmutex.c"
-            SOURCES="$SOURCES $srcdir/src/thread/generic/SDL_syscond.c"
-            have_threads=yes
         fi
         # Set up files for the timer library
         if test x$enable_timers = xyes; then
@@ -2326,7 +2180,7 @@ AC_HELP_STRING([--enable-render-d3d], [enable the Direct3D render driver [[defau
         # SDL 1.3 is unicode, and unicows emulates this on Windows 98/ME
         # You can get this here: http://libunicows.sourceforge.net/
         #EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lunicows"
-        EXTRA_LDFLAGS="$EXTRA_LDFLAGS -luser32 -lgdi32 -lmsimg32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid"
+        EXTRA_LDFLAGS="$EXTRA_LDFLAGS -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid"
         # The Windows platform requires special setup
         VERSION_SOURCES="$srcdir/src/main/windows/*.rc"
         SDLMAIN_SOURCES="$srcdir/src/main/windows/*.c"
@@ -2516,7 +2370,6 @@ for EXT in asm cc m c S; do
 \\$(objects)/\\2.lo: \\1/\\2.$EXT\\\\
 	\\$(LIBTOOL) --mode=compile \\$(CC) \\$(CFLAGS) \\$(EXTRA_CFLAGS) $DEPENDENCY_TRACKING_OPTIONS -c \\$< -o \\$@,g"`
 done
-DEPENDS=`echo "$DEPENDS" | sed 's,\\$,\\\\$,g'`
 
 VERSION_OBJECTS=`echo $VERSION_SOURCES`
 VERSION_DEPENDS=`echo $VERSION_SOURCES`
@@ -2524,7 +2377,6 @@ VERSION_OBJECTS=`echo "$VERSION_OBJECTS" | sed 's,[[^ ]]*/\([[^ ]]*\)\.rc,$(obje
 VERSION_DEPENDS=`echo "$VERSION_DEPENDS" | sed "s,\\([[^ ]]*\\)/\\([[^ ]]*\\)\\.rc,\\\\
 \\$(objects)/\\2.o: \\1/\\2.rc\\\\
 	\\$(WINDRES) \\$< \\$@,g"`
-VERSION_DEPENDS=`echo "$VERSION_DEPENDS" | sed 's,\\$,\\\\$,g'`
 
 SDLMAIN_OBJECTS=`echo $SDLMAIN_SOURCES`
 SDLMAIN_DEPENDS=`echo $SDLMAIN_SOURCES`
@@ -2532,12 +2384,11 @@ SDLMAIN_OBJECTS=`echo "$SDLMAIN_OBJECTS" | sed 's,[[^ ]]*/\([[^ ]]*\)\.c,$(objec
 SDLMAIN_DEPENDS=`echo "$SDLMAIN_DEPENDS" | sed "s,\\([[^ ]]*\\)/\\([[^ ]]*\\)\\.c,\\\\
 \\$(objects)/\\2.o: \\1/\\2.c\\\\
 	\\$(LIBTOOL) --mode=compile \\$(CC) \\$(CFLAGS) \\$(EXTRA_CFLAGS) $DEPENDENCY_TRACKING_OPTIONS -c \\$< -o \\$@,g"`
-SDLMAIN_DEPENDS=`echo "$SDLMAIN_DEPENDS" | sed 's,\\$,\\\\$,g'`
 
 # Set runtime shared library paths as needed
 
 if test "x$enable_rpath" = "xyes"; then
-  if test $ARCH = bsdi -o $ARCH = freebsd -o $ARCH = irix -o $ARCH = linux -o $ARCH = netbsd; then
+  if test $ARCH = bsdi -o $ARCH = freebsd -o $ARCH = linux -o $ARCH = netbsd; then
     SDL_RLD_FLAGS="-Wl,-rpath,\${libdir}"
   fi
   if test $ARCH = solaris; then
@@ -2593,21 +2444,19 @@ AC_SUBST(BUILD_LDFLAGS)
 AC_SUBST(EXTRA_LDFLAGS)
 AC_SUBST(WINDRES)
 
-AC_CONFIG_FILES([
-    Makefile sdl-config SDL.spec sdl.pc
-])
-AC_CONFIG_COMMANDS([default],
-                   [cat >>Makefile <<__EOF__
+cat >Makefile.rules <<__EOF__
 
 # Build rules for objects
 -include \$(OBJECTS:.lo=.d)
+
+# Special dependency for SDL.c, since it depends on SDL_revision.h
+$srcdir/src/SDL.c: update-revision
 $DEPENDS
 $VERSION_DEPENDS
 $SDLMAIN_DEPENDS
-__EOF__ 
-], [
-DEPENDS="$DEPENDS"
-VERSION_DEPENDS="$VERSION_DEPENDS"
-SDLMAIN_DEPENDS="$SDLMAIN_DEPENDS"
+__EOF__
+
+AC_CONFIG_FILES([
+    Makefile:Makefile.in:Makefile.rules sdl-config SDL.spec sdl.pc
 ])
 AC_OUTPUT

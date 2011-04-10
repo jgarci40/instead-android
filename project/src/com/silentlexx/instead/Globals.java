@@ -10,6 +10,7 @@ class Globals {
 
 	//public static final String TAG = "LEXX_Activity";
 
+	public static final int EGL_ver = 1;
 	public static final String ZipName = "data.zip";
 	public static final String GameListFileName = "game_list.xml";
 	public static final String GameListAltFileName = "game_list_alt.xml";
