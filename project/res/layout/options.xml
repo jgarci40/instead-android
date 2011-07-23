@@ -37,7 +37,8 @@
 				android:layout_width="fill_parent" android:layout_height="fill_parent"
 				android:orientation="horizontal">
 
-				<TableRow android:gravity="center"android:layout_marginBottom="20dip">
+				<TableRow android:gravity="center"  android:layout_marginBottom="20dip">
+				
 					<CheckBox android:text="@string/music" android:id="@+id/music"
 						android:layout_width="fill_parent" android:layout_height="wrap_content"
 						android:textSize="25sp"></CheckBox>
@@ -49,7 +50,7 @@
 
 
 				</TableRow>
-				<TableRow android:gravity="center"android:layout_marginBottom="20dip">
+				<TableRow android:gravity="center" android:layout_marginBottom="20dip">
 					<CheckBox android:text="@string/ourtheme" android:id="@+id/ourtheme"
 						android:layout_width="fill_parent" android:layout_height="wrap_content"
 						android:textSize="25sp"></CheckBox>
