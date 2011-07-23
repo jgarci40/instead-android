@@ -7,7 +7,6 @@ import java.util.zip.*;
 import java.io.*;
 
 import android.app.ProgressDialog;
-import android.util.Log;
 
 class GameDownloader extends Thread {
 	class StatusWriter {

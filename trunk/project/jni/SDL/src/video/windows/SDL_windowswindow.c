@@ -1,22 +1,23 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
 
@@ -41,38 +42,11 @@ static WCHAR *SDL_HelperWindowClassName = TEXT("SDLHelperWindowInputCatcher");
 static WCHAR *SDL_HelperWindowName = TEXT("SDLHelperWindowInputMsgWindow");
 static ATOM SDL_HelperWindowClass = 0;
 
-#define STYLE_BASIC         (WS_CLIPSIBLINGS | WS_CLIPCHILDREN)
-#define STYLE_FULLSCREEN    (WS_POPUP)
-#define STYLE_BORDERLESS    (WS_POPUP)
-#define STYLE_NORMAL        (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX)
-#define STYLE_RESIZABLE     (WS_THICKFRAME | WS_MAXIMIZEBOX)
-#define STYLE_MASK          (STYLE_FULLSCREEN | STYLE_BORDERLESS | STYLE_NORMAL | STYLE_RESIZABLE)
-
-static DWORD
-GetWindowStyle(SDL_Window * window)
-{
-    DWORD style = 0;
-
-	if (window->flags & SDL_WINDOW_FULLSCREEN) {
-        style |= STYLE_FULLSCREEN;
-	} else {
-		if (window->flags & SDL_WINDOW_BORDERLESS) {
-            style |= STYLE_BORDERLESS;
-		} else {
-            style |= STYLE_NORMAL;
-		}
-		if (window->flags & SDL_WINDOW_RESIZABLE) {
-            style |= STYLE_RESIZABLE;
-		}
-	}
-    return style;
-}
-
 static int
 SetupWindowData(_THIS, SDL_Window * window, HWND hwnd, SDL_bool created)
 {
     SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
-    SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
+    SDL_VideoDisplay *display = window->display;
     SDL_WindowData *data;
 
     /* Allocate the window data */
@@ -119,8 +93,10 @@ SetupWindowData(_THIS, SDL_Window * window, HWND hwnd, SDL_bool created)
         point.x = 0;
         point.y = 0;
         if (ClientToScreen(hwnd, &point)) {
-            window->x = point.x;
-            window->y = point.y;
+            SDL_Rect bounds;
+            WIN_GetDisplayBounds(_this, display, &bounds);
+            window->x = point.x - bounds.x;
+            window->y = point.y - bounds.y;
         }
     }
     {
@@ -190,25 +166,66 @@ SetupWindowData(_THIS, SDL_Window * window, HWND hwnd, SDL_bool created)
 int
 WIN_CreateWindow(_THIS, SDL_Window * window)
 {
-    SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
+    SDL_VideoDisplay *display = window->display;
     HWND hwnd;
     RECT rect;
-    DWORD style = STYLE_BASIC;
+    SDL_Rect bounds;
+    DWORD style = (WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
     int x, y;
     int w, h;
-    
-    style |= GetWindowStyle(window);
+
+    if (window->flags & (SDL_WINDOW_BORDERLESS | SDL_WINDOW_FULLSCREEN)) {
+        style |= WS_POPUP;
+    } else {
+        style |= (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX);
+    }
+    if ((window->flags & SDL_WINDOW_RESIZABLE)
+        && !(window->flags & SDL_WINDOW_FULLSCREEN)) {
+        style |= (WS_THICKFRAME | WS_MAXIMIZEBOX);
+    }
 
     /* Figure out what the window area will be */
-    rect.left = window->x;
-    rect.top = window->y;
-    rect.right = window->x + window->w;
-    rect.bottom = window->y + window->h;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = window->w;
+    rect.bottom = window->h;
     AdjustWindowRectEx(&rect, style, FALSE, 0);
-    x = rect.left;
-    y = rect.top;
     w = (rect.right - rect.left);
     h = (rect.bottom - rect.top);
+
+    WIN_GetDisplayBounds(_this, display, &bounds);
+    if (window->flags & SDL_WINDOW_FULLSCREEN) {
+        /* The bounds when this window is visible is the fullscreen mode */
+        SDL_DisplayMode fullscreen_mode;
+        if (SDL_GetWindowDisplayMode(window, &fullscreen_mode) == 0) {
+            bounds.w = fullscreen_mode.w;
+            bounds.h = fullscreen_mode.h;
+        }
+    }
+    if ((window->flags & SDL_WINDOW_FULLSCREEN)
+        || window->x == SDL_WINDOWPOS_CENTERED) {
+        x = bounds.x + (bounds.w - w) / 2;
+    } else if (window->x == SDL_WINDOWPOS_UNDEFINED) {
+        if (bounds.x == 0) {
+            x = CW_USEDEFAULT;
+        } else {
+            x = bounds.x;
+        }
+    } else {
+        x = bounds.x + window->x + rect.left;
+    }
+    if ((window->flags & SDL_WINDOW_FULLSCREEN)
+        || window->y == SDL_WINDOWPOS_CENTERED) {
+        y = bounds.y + (bounds.h - h) / 2;
+    } else if (window->x == SDL_WINDOWPOS_UNDEFINED) {
+        if (bounds.x == 0) {
+            y = CW_USEDEFAULT;
+        } else {
+            y = bounds.y;
+        }
+    } else {
+        y = bounds.y + window->y + rect.top;
+    }
 
     hwnd =
         CreateWindow(SDL_Appname, TEXT(""), style, x, y, w, h, NULL, NULL,
@@ -217,6 +234,7 @@ WIN_CreateWindow(_THIS, SDL_Window * window)
         WIN_SetError("Couldn't create window");
         return -1;
     }
+	//RegisterTouchWindow(hwnd, 0);
 
     WIN_PumpEvents(_this);
 
@@ -285,51 +303,58 @@ WIN_SetWindowIcon(_THIS, SDL_Window * window, SDL_Surface * icon)
 {
     HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
     HICON hicon = NULL;
-    BYTE *icon_bmp;
-    int icon_len;
-    SDL_RWops *dst;
-    SDL_Surface *surface;
 
-    /* Create temporary bitmap buffer */
-    icon_len = 40 + icon->h * icon->w * 4;
-    icon_bmp = SDL_stack_alloc(BYTE, icon_len);
-    dst = SDL_RWFromMem(icon_bmp, icon_len);
-    if (!dst) {
-        SDL_stack_free(icon_bmp);
-        return;
-    }
+    if (icon) {
+        BYTE *icon_bmp;
+        int icon_len;
+        SDL_RWops *dst;
+        SDL_PixelFormat format;
+        SDL_Surface *surface;
 
-    /* Write the BITMAPINFO header */
-    SDL_WriteLE32(dst, 40);
-    SDL_WriteLE32(dst, icon->w);
-    SDL_WriteLE32(dst, icon->h * 2);
-    SDL_WriteLE16(dst, 1);
-    SDL_WriteLE16(dst, 32);
-    SDL_WriteLE32(dst, BI_RGB);
-    SDL_WriteLE32(dst, icon->h * icon->w * 4);
-    SDL_WriteLE32(dst, 0);
-    SDL_WriteLE32(dst, 0);
-    SDL_WriteLE32(dst, 0);
-    SDL_WriteLE32(dst, 0);
-
-    /* Convert the icon to a 32-bit surface with alpha channel */
-    surface = SDL_ConvertSurfaceFormat(icon, SDL_PIXELFORMAT_ARGB8888, 0);
-    if (surface) {
-        /* Write the pixels upside down into the bitmap buffer */
-        int y = surface->h;
-        while (y--) {
-            Uint8 *src = (Uint8 *) surface->pixels + y * surface->pitch;
-            SDL_RWwrite(dst, src, surface->pitch, 1);
+        /* Create temporary bitmap buffer */
+        icon_len = 40 + icon->h * icon->w * 4;
+        icon_bmp = SDL_stack_alloc(BYTE, icon_len);
+        dst = SDL_RWFromMem(icon_bmp, icon_len);
+        if (!dst) {
+            SDL_stack_free(icon_bmp);
+            return;
         }
-        SDL_FreeSurface(surface);
+
+        /* Write the BITMAPINFO header */
+        SDL_WriteLE32(dst, 40);
+        SDL_WriteLE32(dst, icon->w);
+        SDL_WriteLE32(dst, icon->h * 2);
+        SDL_WriteLE16(dst, 1);
+        SDL_WriteLE16(dst, 32);
+        SDL_WriteLE32(dst, BI_RGB);
+        SDL_WriteLE32(dst, icon->h * icon->w * 4);
+        SDL_WriteLE32(dst, 0);
+        SDL_WriteLE32(dst, 0);
+        SDL_WriteLE32(dst, 0);
+        SDL_WriteLE32(dst, 0);
+
+        /* Convert the icon to a 32-bit surface with alpha channel */
+        SDL_InitFormat(&format, 32,
+                       0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+        surface = SDL_ConvertSurface(icon, &format, 0);
+        if (surface) {
+            /* Write the pixels upside down into the bitmap buffer */
+            int y = surface->h;
+            while (y--) {
+                Uint8 *src = (Uint8 *) surface->pixels + y * surface->pitch;
+                SDL_RWwrite(dst, src, surface->pitch, 1);
+            }
+            SDL_FreeSurface(surface);
 
 /* TODO: create the icon in WinCE (CreateIconFromResource isn't available) */
 #ifndef _WIN32_WCE
-        hicon = CreateIconFromResource(icon_bmp, icon_len, TRUE, 0x00030000);
+            hicon =
+                CreateIconFromResource(icon_bmp, icon_len, TRUE, 0x00030000);
 #endif
+        }
+        SDL_RWclose(dst);
+        SDL_stack_free(icon_bmp);
     }
-    SDL_RWclose(dst);
-    SDL_stack_free(icon_bmp);
 
     /* Set the icon for the window */
     SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM) hicon);
@@ -341,9 +366,10 @@ WIN_SetWindowIcon(_THIS, SDL_Window * window, SDL_Surface * icon)
 void
 WIN_SetWindowPosition(_THIS, SDL_Window * window)
 {
-    SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
+    SDL_VideoDisplay *display = window->display;
     HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
     RECT rect;
+    SDL_Rect bounds;
     DWORD style;
     HWND top;
     BOOL menu;
@@ -369,8 +395,28 @@ WIN_SetWindowPosition(_THIS, SDL_Window * window)
     AdjustWindowRectEx(&rect, style, menu, 0);
     w = (rect.right - rect.left);
     h = (rect.bottom - rect.top);
-    x = window->x + rect.left;
-    y = window->y + rect.top;
+
+    WIN_GetDisplayBounds(_this, display, &bounds);
+    if (window->flags & SDL_WINDOW_FULLSCREEN) {
+        /* The bounds when this window is visible is the fullscreen mode */
+        SDL_DisplayMode fullscreen_mode;
+        if (SDL_GetWindowDisplayMode(window, &fullscreen_mode) == 0) {
+            bounds.w = fullscreen_mode.w;
+            bounds.h = fullscreen_mode.h;
+        }
+    }
+    if ((window->flags & SDL_WINDOW_FULLSCREEN)
+        || window->x == SDL_WINDOWPOS_CENTERED) {
+        x = bounds.x + (bounds.w - w) / 2;
+    } else {
+        x = bounds.x + window->x + rect.left;
+    }
+    if ((window->flags & SDL_WINDOW_FULLSCREEN)
+        || window->y == SDL_WINDOWPOS_CENTERED) {
+        y = bounds.y + (bounds.h - h) / 2;
+    } else {
+        y = bounds.y + window->y + rect.top;
+    }
 
     SetWindowPos(hwnd, top, x, y, 0, 0, (SWP_NOCOPYBITS | SWP_NOSIZE));
 }
@@ -407,36 +453,6 @@ WIN_SetWindowSize(_THIS, SDL_Window * window)
 
     SetWindowPos(hwnd, top, 0, 0, w, h, (SWP_NOCOPYBITS | SWP_NOMOVE));
 }
-
-#ifdef _WIN32_WCE
-void WINCE_ShowWindow(_THIS, SDL_Window* window, int visible)
-{
-    SDL_WindowData* windowdata = (SDL_WindowData*) window->driverdata;
-    SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
-
-    if(visible) {
-        if(window->flags & SDL_WINDOW_FULLSCREEN) {
-            if(videodata->SHFullScreen)
-                videodata->SHFullScreen(windowdata->hwnd, SHFS_HIDETASKBAR | SHFS_HIDESTARTICON | SHFS_HIDESIPBUTTON);
-
-            ShowWindow(FindWindow(TEXT("HHTaskBar"), NULL), SW_HIDE);
-        }
-
-        ShowWindow(windowdata->hwnd, SW_SHOW);
-        SetForegroundWindow(windowdata->hwnd);
-    } else {
-        ShowWindow(windowdata->hwnd, SW_HIDE);
-
-        if(window->flags & SDL_WINDOW_FULLSCREEN) {
-            if(videodata->SHFullScreen)
-                videodata->SHFullScreen(windowdata->hwnd, SHFS_SHOWTASKBAR | SHFS_SHOWSTARTICON | SHFS_SHOWSIPBUTTON);
-
-            ShowWindow(FindWindow(TEXT("HHTaskBar"), NULL), SW_SHOW);
-
-        }
-    }
-}
-#endif /* _WIN32_WCE */
 
 void
 WIN_ShowWindow(_THIS, SDL_Window * window)
@@ -498,7 +514,7 @@ WIN_MinimizeWindow(_THIS, SDL_Window * window)
 
 #ifdef _WIN32_WCE
     if((window->flags & SDL_WINDOW_FULLSCREEN) && videodata->SHFullScreen)
-        videodata->SHFullScreen(hwnd, SHFS_SHOWTASKBAR | SHFS_SHOWSTARTICON | SHFS_SHOWSIPBUTTON);
+	videodata->SHFullScreen(hwnd, SHFS_SHOWTASKBAR | SHFS_SHOWSTARTICON | SHFS_SHOWSIPBUTTON);
 #endif
 }
 
@@ -511,109 +527,12 @@ WIN_RestoreWindow(_THIS, SDL_Window * window)
 }
 
 void
-WIN_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * display, SDL_bool fullscreen)
-{
-    SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
-    HWND hwnd = data->hwnd;
-    RECT rect;
-    SDL_Rect bounds;
-    DWORD style;
-    HWND top;
-    BOOL menu;
-    int x, y;
-    int w, h;
-
-    if (fullscreen) {
-        top = HWND_TOPMOST;
-    } else {
-        top = HWND_NOTOPMOST;
-    }
-    style = GetWindowLong(hwnd, GWL_STYLE);
-    style &= ~STYLE_MASK;
-    style |= GetWindowStyle(window);
-
-    WIN_GetDisplayBounds(_this, display, &bounds);
-
-    if (fullscreen) {
-        x = bounds.x;
-        y = bounds.y;
-        w = bounds.w;
-        h = bounds.h;
-    } else {
-        rect.left = 0;
-        rect.top = 0;
-        rect.right = window->windowed.w;
-        rect.bottom = window->windowed.h;
-#ifdef _WIN32_WCE
-        menu = FALSE;
-#else
-        menu = (style & WS_CHILDWINDOW) ? FALSE : (GetMenu(hwnd) != NULL);
-#endif
-        AdjustWindowRectEx(&rect, style, menu, 0);
-        w = (rect.right - rect.left);
-        h = (rect.bottom - rect.top);
-        x = window->windowed.x + rect.left;
-        y = window->windowed.y + rect.top;
-    }
-    SetWindowLong(hwnd, GWL_STYLE, style);
-    SetWindowPos(hwnd, top, x, y, w, h, SWP_NOCOPYBITS);
-}
-
-int
-WIN_SetWindowGammaRamp(_THIS, SDL_Window * window, const Uint16 * ramp)
-{
-#ifdef _WIN32_WCE
-    SDL_Unsupported();
-    return -1;
-#else
-    SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
-    SDL_DisplayData *data = (SDL_DisplayData *) display->driverdata;
-    HDC hdc;
-    BOOL succeeded = FALSE;
-
-    hdc = CreateDC(data->DeviceName, NULL, NULL, NULL);
-    if (hdc) {
-        succeeded = SetDeviceGammaRamp(hdc, (LPVOID)ramp);
-        if (!succeeded) {
-            WIN_SetError("SetDeviceGammaRamp()");
-        }
-        DeleteDC(hdc);
-    }
-    return succeeded ? 0 : -1;
-#endif
-}
-
-int
-WIN_GetWindowGammaRamp(_THIS, SDL_Window * window, Uint16 * ramp)
-{
-#ifdef _WIN32_WCE
-    SDL_Unsupported();
-    return -1;
-#else
-    SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
-    SDL_DisplayData *data = (SDL_DisplayData *) display->driverdata;
-    HDC hdc;
-    BOOL succeeded = FALSE;
-
-    hdc = CreateDC(data->DeviceName, NULL, NULL, NULL);
-    if (hdc) {
-        succeeded = GetDeviceGammaRamp(hdc, (LPVOID)ramp);
-        if (!succeeded) {
-            WIN_SetError("GetDeviceGammaRamp()");
-        }
-        DeleteDC(hdc);
-    }
-    return succeeded ? 0 : -1;
-#endif
-}
-
-void
 WIN_SetWindowGrab(_THIS, SDL_Window * window)
 {
     HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
 
-    if ((window->flags & SDL_WINDOW_INPUT_GRABBED) &&
-        (window->flags & SDL_WINDOW_INPUT_FOCUS)) {
+    if ((window->flags & (SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_FULLSCREEN))
+        && (window->flags & SDL_WINDOW_INPUT_FOCUS)) {
         RECT rect;
         GetClientRect(hwnd, &rect);
         ClientToScreen(hwnd, (LPPOINT) & rect);

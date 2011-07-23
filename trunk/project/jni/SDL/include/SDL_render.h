@@ -1,22 +1,23 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 
 /**
@@ -62,10 +63,9 @@ extern "C" {
  */
 typedef enum
 {
-    SDL_RENDERER_SOFTWARE = 0x00000001,         /**< The renderer is a software fallback */ 
-    SDL_RENDERER_ACCELERATED = 0x00000002,      /**< The renderer uses hardware 
+    SDL_RENDERER_ACCELERATED = 0x00000001,      /**< The renderer uses hardware 
                                                      acceleration */
-    SDL_RENDERER_PRESENTVSYNC = 0x00000004      /**< Present is synchronized 
+    SDL_RENDERER_PRESENTVSYNC = 0x00000002      /**< Present is synchronized 
                                                      with the refresh rate */
 } SDL_RendererFlags;
 
@@ -174,11 +174,6 @@ extern DECLSPEC SDL_Renderer * SDLCALL SDL_CreateRenderer(SDL_Window * window,
 extern DECLSPEC SDL_Renderer * SDLCALL SDL_CreateSoftwareRenderer(SDL_Surface * surface);
 
 /**
- *  \brief Get the renderer associated with a window.
- */
-extern DECLSPEC SDL_Renderer * SDLCALL SDL_GetRenderer(SDL_Window * window);
-
-/**
  *  \brief Get information about a rendering context.
  */
 extern DECLSPEC int SDLCALL SDL_GetRendererInfo(SDL_Renderer * renderer,
@@ -197,11 +192,9 @@ extern DECLSPEC int SDLCALL SDL_GetRendererInfo(SDL_Renderer * renderer,
  *          of range.
  *  
  *  \sa SDL_QueryTexture()
- *  \sa SDL_UpdateTexture()
  *  \sa SDL_DestroyTexture()
  */
-extern DECLSPEC SDL_Texture * SDLCALL SDL_CreateTexture(SDL_Renderer * renderer,
-                                                        Uint32 format,
+extern DECLSPEC SDL_Texture * SDLCALL SDL_CreateTexture(SDL_Renderer * renderer,                                                        Uint32 format,
                                                         int access, int w,
                                                         int h);
 
@@ -370,25 +363,6 @@ extern DECLSPEC int SDLCALL SDL_LockTexture(SDL_Texture * texture,
 extern DECLSPEC void SDLCALL SDL_UnlockTexture(SDL_Texture * texture);
 
 /**
- *  \brief Set the drawing area for rendering on the current target.
- *
- *  \param rect The rectangle representing the drawing area, or NULL to set the viewport to the entire target.
- *
- *  The x,y of the viewport rect represents the origin for rendering.
- *
- *  \note When the window is resized, the current viewport is automatically
- *        centered within the new window size.
- */
-extern DECLSPEC int SDLCALL SDL_RenderSetViewport(SDL_Renderer * renderer,
-                                                  const SDL_Rect * rect);
-
-/**
- *  \brief Get the drawing area for the current target.
- */
-extern DECLSPEC void SDLCALL SDL_RenderGetViewport(SDL_Renderer * renderer,
-                                                   SDL_Rect * rect);
-
-/**
  *  \brief Set the color used for drawing operations (Fill and Line).
  *  
  *  \param r The red value used to draw on the rendering target.
@@ -447,8 +421,6 @@ extern DECLSPEC int SDLCALL SDL_GetRenderDrawBlendMode(SDL_Renderer * renderer,
 
 /**
  *  \brief Clear the current rendering target with the drawing color
- *
- *  This function clears the entire rendering target, ignoring the viewport.
  */
 extern DECLSPEC int SDLCALL SDL_RenderClear(SDL_Renderer * renderer);
 
@@ -519,7 +491,7 @@ extern DECLSPEC int SDLCALL SDL_RenderDrawRect(SDL_Renderer * renderer,
  *  \return 0 on success, or -1 on error
  */
 extern DECLSPEC int SDLCALL SDL_RenderDrawRects(SDL_Renderer * renderer,
-                                                const SDL_Rect * rects,
+                                                const SDL_Rect ** rects,
                                                 int count);
 
 /**
@@ -542,7 +514,7 @@ extern DECLSPEC int SDLCALL SDL_RenderFillRect(SDL_Renderer * renderer,
  *  \return 0 on success, or -1 on error
  */
 extern DECLSPEC int SDLCALL SDL_RenderFillRects(SDL_Renderer * renderer,
-                                                const SDL_Rect * rects,
+                                                const SDL_Rect ** rect,
                                                 int count);
 
 /**

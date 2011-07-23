@@ -8,10 +8,12 @@
 #include "SDL_rotozoom.h"
 #include "SDL_gfxBlitFunc.h"
 #include "SDL_anigif.h"
+#include "sdl_idf.h"
 
 #define Surf(p) ((SDL_Surface *)p)
 
 static SDL_Surface *screen = NULL;
+static cache_t images = NULL;
 
 static struct {
 	const char *name;
@@ -249,6 +251,7 @@ struct _anigif_t {
 };
 
 typedef struct _anigif_t *anigif_t;
+extern int timer_counter;
 
 static int anigif_spawn(anigif_t ag, int x, int y, int w, int h)
 {
@@ -287,7 +290,6 @@ static anigif_t anigif_find(anigif_t g)
 	}
 	return NULL;
 }
-extern int timer_counter;
 
 static void anigif_disposal(anigif_t g)
 {
@@ -429,6 +431,8 @@ void gfx_free_image(img_t p)
 	anigif_t ag;
 	if (!p)
 		return;
+	if (!cache_forget(images, p))
+		return; /* cached sprite */
 	if ((ag = is_anigif(p))) {
 		if (ag->drawn)
 			anigif_drawn_nr --;
@@ -500,14 +504,14 @@ img_t 	gfx_new(int w, int h)
 		bmask = 0x00ff0000;
 		amask = 0xff000000;
 #endif
-		dst = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 
+		dst = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA, w, h, 
 			32,
 			rmask, 
 			gmask, 
 			bmask, 
 			amask);	
 	} else {
-		dst = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 
+		dst = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA, w, h, 
 			screen->format->BitsPerPixel, 
 			screen->format->Rmask, 
 			screen->format->Gmask, 
@@ -569,6 +573,8 @@ img_t gfx_display_alpha(img_t src)
 		return NULL;
 	if (!screen)
 		return src;
+	if (is_anigif(Surf(src))) /* already optimized */
+		return src;
 	res = SDL_DisplayFormatAlpha(Surf(src));
 	if (!res)
 		return src;
@@ -576,12 +582,83 @@ img_t gfx_display_alpha(img_t src)
 	return res;
 }
 
+int gfx_get_pixel(img_t src, int x, int y,  color_t *color)
+{
+	Uint8 r, g, b, a;
+	Uint32 col = 0;
+	Uint8 *ptr;
+	int	bpp;
+	SDL_Surface *img = Surf(src);
+	if (!img)
+		return -1;
+
+	if (x >= img->w || y >= img->h || x < 0 || y < 0)
+		return -1;
+
+	if (SDL_LockSurface(img))
+		return -1;
+
+	if (img->format)
+		bpp = img->format->BytesPerPixel;
+	else
+		bpp = 1; /* hack? */
+
+	ptr = (Uint8*)img->pixels;
+	ptr += img->pitch * y;
+	ptr += x * bpp;
+
+	memcpy(&col, ptr, bpp);
+
+	SDL_UnlockSurface(img);	
+	if (color)
+		SDL_GetRGBA(col, img->format, &r, &g, &b, &a);
+
+	if (color) {
+		color->r = r;
+		color->g = g;
+		color->b = b;
+		color->a = a;
+	}
+	return 0;
+}
+
+int gfx_set_pixel(img_t src, int x, int y,  color_t color)
+{
+	int bpp;
+	Uint32 col;
+	Uint8 *ptr;
+	SDL_Surface *img = Surf(src);
+	if (!img)
+		return -1;
+
+	if (x >= img->w || y >= img->h || x < 0 || y < 0)
+		return -1;
+
+	if (SDL_LockSurface(img))
+		return -1;
+
+	if (img->format)
+		bpp = img->format->BytesPerPixel;
+	else
+		bpp = 1; /* hack? */
+
+	ptr = (Uint8*)img->pixels;
+	ptr += img->pitch * y;
+	ptr += x * bpp;
+	col = SDL_MapRGBA(img->format, color.r, color.g, color.b, color.a);
+	memcpy(ptr, &col, bpp);
+
+	SDL_UnlockSurface(img);
+	return 0;
+}
+
 img_t gfx_alpha_img(img_t src, int alpha)
 {
-	Uint32 *ptr;
+	Uint8 *ptr;
 	Uint32 col;
 	int size;
-	
+	int bpp;
+
 	SDL_Surface *img;
 	if (screen)
 		img = SDL_DisplayFormatAlpha((SDL_Surface*)src);
@@ -589,18 +666,33 @@ img_t gfx_alpha_img(img_t src, int alpha)
 		img = gfx_new(Surf(src)->w, Surf(src)->h);
 	if (!img)
 		return NULL;
-#if SDL_VERSION_ATLEAST(1,3,0)
-	SDL_SetAlpha(img, SDL_SRCALPHA, 255);
-#endif
-	ptr = (Uint32*)img->pixels;
-	size = img->w * img->h;
-	while (size --) {
-		Uint8 r, g, b, a;
-		col = *ptr;
-		SDL_GetRGBA(col, img->format, &r, &g, &b, &a);
-		col = SDL_MapRGBA(img->format, r, g, b, a * alpha / 255);
-		*ptr = col;
-		ptr ++;
+
+	if (img->format)
+		bpp = img->format->BytesPerPixel;
+	else
+		bpp = 1;
+
+	SDL_SetAlpha(img, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
+
+	if (SDL_LockSurface(img) == 0) {
+		int w = img->w;
+		ptr = (Uint8*)img->pixels;
+		size = img->w * img->h;		
+		while (size --) {
+			Uint8 r, g, b, a;
+			memcpy(&col, ptr, bpp);
+			SDL_GetRGBA(col, img->format, &r, &g, &b, &a);
+			col = SDL_MapRGBA(img->format, r, g, b, a * alpha / 255);
+			memcpy(ptr, &col, bpp);
+			ptr += bpp;
+			w --;
+			if (!w) {
+				w = img->w;
+				ptr += img->pitch;
+				ptr -= w * bpp;
+			}
+		}
+		SDL_UnlockSurface(img);
 	}
 	return img;
 }
@@ -608,10 +700,19 @@ img_t gfx_alpha_img(img_t src, int alpha)
 void	gfx_set_alpha(img_t src, int alpha)
 {
 #if SDL_VERSION_ATLEAST(1,3,0)
-	SDL_SetAlpha((SDL_Surface *)src, SDL_SRCALPHA, alpha);
+	SDL_SetSurfaceAlphaMod((SDL_Surface *)src, alpha);
+	if (alpha == 0xff)
+		SDL_SetSurfaceBlendMode((SDL_Surface *)src, SDL_BLENDMODE_NONE);
+	else
+		SDL_SetSurfaceBlendMode((SDL_Surface *)src, SDL_BLENDMODE_BLEND);
 #else
-	SDL_SetAlpha((SDL_Surface *)src, SDL_SRCALPHA | SDL_RLEACCEL, alpha);
+	SDL_SetAlpha((SDL_Surface *)src, SDL_SRCALPHA, alpha);
 #endif
+}
+
+void	gfx_unset_alpha(img_t src)
+{
+	SDL_SetAlpha((SDL_Surface *)src, 0, SDL_ALPHA_OPAQUE);
 }
 
 img_t gfx_combine(img_t src, img_t dst)
@@ -669,7 +770,7 @@ static img_t img_pad(char *fname)
 static img_t _gfx_load_combined_image(char *filename);
 
 /* blank:WxH */
-static img_t _gfx_load_special_image(char *f)
+static img_t _gfx_load_special_image(char *f, int combined)
 {
 	int alpha = 0;
 	int blank = 0;
@@ -680,13 +781,17 @@ static img_t _gfx_load_special_image(char *f)
 	if (!f)
 		return NULL;
 
-
 	if (!(f = filename = strdup(f)))
 		return NULL;
 
 	if (!strncmp(filename, "blank:", 6)) {
 		filename += 6;
 		blank = 1;
+	} else if (!strncmp(filename, "spr:", 4) && !combined) {
+//		filename += 4;
+		img2 = cache_get(images, filename);
+//		fprintf(stderr, "get:%s %p\n", filename, img2);
+		goto out;
 	} else if (!strncmp(filename, "box:", 4)) {
 		filename += 4;
 		alpha = 255;
@@ -726,6 +831,7 @@ skip:
 	img = gfx_new(wh[0], wh[1]);
 	if (!img)
 		goto err;
+
 	if (pc) {
 		color_t col = { .r = 255, .g = 255, .b = 255 };
 		gfx_parse_color(pc, &col);
@@ -733,6 +839,7 @@ skip:
 	}
 	if (pt)
 		alpha = atoi(pt);
+
 	img2 = gfx_alpha_img(img, alpha);
 	gfx_free_image(img);
 out:
@@ -743,15 +850,20 @@ err:
 	return NULL;
 }
 
-static img_t _gfx_load_image(char *filename)
+cache_t gfx_image_cache(void)
 {
+	return images;
+}
+
+static img_t _gfx_load_image(char *filename, int combined)
+{
+	SDL_RWops *rw;
 	SDL_Surface *img;
 	int nr = 0;
 	filename = strip(filename);
-	img = _gfx_load_special_image(filename);
+	img = _gfx_load_special_image(filename, combined);
 	if (img)
 		return img;
-	filename = dirpath(filename);
 	if (strstr(filename,".gif") || strstr(filename,".GIF"))
 		nr = AG_LoadGIF(filename, NULL, 0, NULL);
 	if (nr > 1) { /* anigif logic */
@@ -765,22 +877,20 @@ static img_t _gfx_load_image(char *filename)
 		agif->loop = loop;
 		agif->nr_frames = nr;
 		anigif_add(agif);
+//		fprintf(stderr, "anigif: %s %p\n", filename, agif->frames[0].surface);
 		return agif->frames[0].surface;
 	}
-	img = IMG_Load(filename);
-	if (!img) {
+	rw = RWFromIdf(game_idf, filename);
+
+	if (!rw || !(img = IMG_Load_RW(rw, 1)))
 		return NULL;
-	}
+
 	if (img->format->BitsPerPixel == 32) { /* hack for 32 bit BMP :( */
 		SDL_RWops *rwop;
-		rwop = SDL_RWFromFile(filename, "rb");
+		rwop = RWFromIdf(game_idf, filename);
 		if (rwop) {
 			if (IMG_isBMP(rwop))
-#if SDL_VERSION_ATLEAST(1,3,0)
 				SDL_SetAlpha(img, 0, SDL_ALPHA_OPAQUE);
-#else
-				SDL_SetAlpha(img, SDL_RLEACCEL, SDL_ALPHA_OPAQUE);
-#endif
 			SDL_RWclose(rwop);
 		}
 	}
@@ -802,7 +912,7 @@ static img_t _gfx_load_combined_image(char *filename)
 		goto err; /* first image is a base image */
 	*ep = 0;
 
-	base = _gfx_load_image(strip(p));
+	base = _gfx_load_image(strip(p), 1);
 	if (!base)
 		goto err;
 	p = ep + 1;
@@ -825,7 +935,7 @@ static img_t _gfx_load_combined_image(char *filename)
 		} else if (*ep) {
 			goto err;
 		}
-		img = _gfx_load_image(strip(p));
+		img = _gfx_load_image(strip(p), 1);
 		if (img) {
 			to.x = x; to.y = y;
 			if (c) {
@@ -852,7 +962,7 @@ img_t gfx_load_image(char *filename)
 	if (!filename)
 		return NULL;
 /*	if (!access(filename, R_OK)) */
-		img = _gfx_load_image(filename);
+		img = _gfx_load_image(filename, 0);
 	if (!img)
 		img = _gfx_load_combined_image(filename);
 	if (!img)
@@ -875,10 +985,13 @@ void gfx_draw_bg(img_t p, int x, int y, int width, int height)
 	SDL_BlitSurface(pixbuf, &src, screen, &dest);
 }
 
-void gfx_draw_from(img_t p, int x, int y, int xx, int yy, int width, int height)
+void gfx_draw_from(img_t p, int x, int y, int width, int height, img_t to, int xx, int yy)
 {
 	SDL_Surface *pixbuf = (SDL_Surface *)p;
+	SDL_Surface *scr = (SDL_Surface *)to;
 	SDL_Rect dest, src;
+	if (!scr)
+		scr = screen;
 	src.x = x;
 	src.y = y;
 	src.w = width;
@@ -887,7 +1000,27 @@ void gfx_draw_from(img_t p, int x, int y, int xx, int yy, int width, int height)
 	dest.y = yy; 
 	dest.w = width; 
 	dest.h = height;
-	SDL_BlitSurface(pixbuf, &src, screen, &dest);
+	SDL_BlitSurface(pixbuf, &src, scr, &dest);
+}
+
+void gfx_copy_from(img_t p, int x, int y, int width, int height, img_t to, int xx, int yy)
+{
+	SDL_Surface *pixbuf = (SDL_Surface *)p;
+	SDL_Surface *scr = (SDL_Surface *)to;
+	SDL_Rect dest, src;
+	if (!scr)
+		scr = screen;
+	src.x = x;
+	src.y = y;
+	src.w = width;
+	src.h = height;
+	dest.x = xx;
+	dest.y = yy; 
+	dest.w = width; 
+	dest.h = height;
+	gfx_unset_alpha(pixbuf);
+	SDL_BlitSurface(pixbuf, &src, scr, &dest);
+	gfx_set_alpha(pixbuf, 255);
 }
 
 void gfx_draw(img_t p, int x, int y)
@@ -899,7 +1032,10 @@ void gfx_draw(img_t p, int x, int y)
 	dest.y = y; 
 	dest.w = pixbuf->w; 
 	dest.h = pixbuf->h;
-	ag = is_anigif(pixbuf);
+	if (!DIRECT_MODE) /* no gifs in direct mode */
+		ag = is_anigif(pixbuf);
+	else
+		ag = NULL;
 	if (ag) {
 		anigif_spawn(ag, x, y, dest.w, dest.h);
 		if (!ag->drawn)
@@ -945,19 +1081,18 @@ int gfx_frame_gif(img_t img)
 {
 	anigif_t ag;
 	ag = is_anigif(img);
-	
+
 	if (!ag)
 		return 0;
-		
+
 	if (!ag->drawn || !ag->active)
 		return 0;
-		
 	if (ag->loop == -1)
 		return 0;
-		
+
 	if ((timer_counter - ag->delay) < (ag->frames[ag->cur_frame].delay / HZ))
 		return 0;
-	
+
 	if (ag->cur_frame != ag->nr_frames - 1 || ag->loop > 1 || !ag->loop)
 		anigif_disposal(ag);
 		
@@ -977,6 +1112,7 @@ int gfx_frame_gif(img_t img)
 	}
 	if (ag->loop != -1)
 		anigif_frame(ag);
+
 	return 1;
 }
 
@@ -1179,7 +1315,11 @@ int gfx_set_mode(int w, int h, int fs)
 		screen = SDL_SetVideoMode(gfx_width, gfx_height, 0, SDL_ANYFORMAT | SDL_SWSURFACE | ( ( fs ) ? SDL_FULLSCREEN : 0 ) );
    #else
     #ifndef _WIN32_WCE
+	#if SDL_VERSION_ATLEAST(1,3,0)
+	screen = SDL_SetVideoMode(gfx_width, gfx_height, 32, SDL_DOUBLEBUF | SDL_HWSURFACE | ( ( fs ) ? SDL_FULLSCREEN : 0 ) );
+	#else
 	screen = SDL_SetVideoMode(gfx_width, gfx_height, (fs)?32:0, SDL_DOUBLEBUF | SDL_HWSURFACE | ( ( fs ) ? SDL_FULLSCREEN : 0 ) );
+	#endif
 	if (screen == NULL) /* ok, fallback to anyformat */
     #endif
 		screen = SDL_SetVideoMode(gfx_width, gfx_height, 0, SDL_ANYFORMAT | SDL_HWSURFACE | ( ( fs ) ? SDL_FULLSCREEN : 0 ) );
@@ -1191,6 +1331,7 @@ int gfx_set_mode(int w, int h, int fs)
 		fprintf(stderr, "Unable to set %dx%d video: %s\n", w, h, SDL_GetError());
 		return -1;
 	}
+	fprintf(stderr,"Video mode: %dx%d@%dbpp\n", screen->w, screen->h, screen->format->BitsPerPixel);
 	gfx_clear(0, 0, gfx_width, gfx_height);
 	return 0;
 }
@@ -1276,6 +1417,42 @@ img_t gfx_scale(img_t src, float xscale, float yscale)
 	}
 	return (img_t)zoomSurface((SDL_Surface *)src, xscale, yscale, 1);
 }
+
+img_t gfx_rotate(img_t src, float angle)
+{
+	anigif_t ag;
+
+	float rangle = angle * (M_PI / 180.0);
+
+	if ((ag = is_anigif(Surf(src)))) {
+		int i;
+		int w,h;
+		float x, y, x1, y1;
+
+		w = gfx_img_w(src);
+		h = gfx_img_h(src);
+
+		for (i = 0; i < ag->nr_frames; i ++) {
+			SDL_Surface *s = rotozoomSurface(ag->frames[i].surface, angle, 1.0, 11);
+			if (i)
+				SDL_FreeSurface(ag->frames[i].surface);
+
+			ag->frames[i].surface = s;
+
+			x = (float)(ag->frames[i].x) - w / 2;
+			y = (float)(ag->frames[i].y) - h / 2;
+
+			x1 = x*cos(rangle) - y*sin(rangle);
+			y1 = y*cos(rangle) + x*sin(rangle);
+			
+			ag->frames[i].x = x1 + w / 2;
+			ag->frames[i].y = y1 + h / 2;
+		}
+		return ag->frames[0].surface;
+	}
+	return (img_t)rotozoomSurface(Surf(src), angle, 1.0, 1);
+}
+
 #define FN_REG  0
 #define FN_BOLD  1
 #define FN_ITALIC  2
@@ -1309,6 +1486,10 @@ static int parse_fn(const char *f, char *files[])
 	while (1) {
 		f += strspn(f, " \t");
 		e = strcspn(f, ",}");
+		if (!e) { /* empty subst */
+			files[nr] = NULL;
+			goto skip;
+		}
 		files[nr] = malloc(e + pref + elen + 1);
 		if (!files[nr])
 			break;
@@ -1319,6 +1500,7 @@ static int parse_fn(const char *f, char *files[])
 		if (elen)
 			memcpy(files[nr] + pref + e, ep, elen);
 		*(files[nr] + pref + e + elen) = 0;
+skip:
 		nr ++;
 		if (!f[e] || f[e] == '}')
 			break;
@@ -1346,10 +1528,13 @@ fnt_t fnt_load(const char *fname, int size)
 	if (!n)
 		goto err;
 	for (i = 0; i < n; i++) {
-		if (!is_empty(files[i]))
-			fn = TTF_OpenFont(files[i], size);
-		else
-			fn = NULL;
+		fn = NULL;
+		if (!is_empty(files[i])) {
+			SDL_RWops *rw = RWFromIdf(game_idf, files[i]);
+			if (!rw || !(fn = TTF_OpenFontRW(rw, 1, size))) {
+				fprintf(stderr, "Can not load font: '%s'\n", files[i]);
+			}
+		} 
 		if (!fn && i == 0) /* no regular */
 			goto err;
 #ifdef TTF_HINTING_LIGHT
@@ -1571,10 +1756,8 @@ int	word_geom(word_t v, int *x, int *y, int *w, int *h)
 	int xx, yy, ww, hh;
 	struct line *line;
 	struct word *word = (struct word*)v;
-	img_t img;
 	if (!word || !word->line)
 		return -1;
-	img = word->img;
 	line = word->line;
 	xx = word->x + line->x;
 	ww = word->w;
@@ -2150,24 +2333,38 @@ void _txt_layout_free(layout_t lay)
 	layout->vcnt = 0;
 }
 
-word_t txt_layout_words(layout_t lay, word_t v)
+word_t txt_layout_words_ex(layout_t lay, struct line *line, word_t v, int off, int height)
 {
+	struct layout *layout = (struct layout*)lay;
 	struct word *w = (struct word*)v;
-	struct layout *layout = (struct layout *)lay;
-	struct line *line;
-	if (!layout)
+
+	if (!lay)
 		return NULL;
+
 	if (!w) {
-		if (!(line = layout->lines))
+		if (!line)
+			line = layout->lines;
+		if (!line)
 			return NULL;
 		w = line->words;
 	} else {
 		line = w->line;
 		w = w->next;
 	}
-	for (; !w && line->next; line = line->next, w = line->words);
-	return w;	
+
+	for (; (!w || (line->y + line->h) < off) && line->next; line = line->next, w = line->words);
+	if ((line->y + line->h) < off)
+		w = NULL;
+	else if (height >= 0 && line->y - off > height)
+		w = NULL;
+	return w;
 }
+
+word_t txt_layout_words(layout_t lay, word_t v)
+{
+	return txt_layout_words_ex(lay, NULL, v, 0, -1);
+}
+
 void txt_layout_free(layout_t lay)
 {
 	struct layout *layout = (struct layout *)lay;
@@ -2723,7 +2920,6 @@ void xref_update(xref_t pxref, int x, int y, clear_fn clear, update_fn update)
 	}
 	gfx_noclip();
 }
-
 
 void txt_layout_draw_ex(layout_t lay, struct line *line, int x, int y, int off, int height, clear_fn clear)
 {
@@ -3836,21 +4032,9 @@ static void update_gfx(void *aux)
 	if (fade_step_nr == -1 || !img || !fade_bg)
 		return;
 	game_cursor(CURSOR_CLEAR);
-#if SDL_VERSION_ATLEAST(1,3,0)
-	do { /* hack while SDL 1.3.0 is not released */
-		img_t img2;
-		img2 = gfx_alpha_img(img, (255 * (fade_step_nr + 1)) / ALPHA_STEPS);
-		if (img2) {
-			gfx_draw(fade_bg, 0, 0);
-			gfx_draw(img2, 0, 0);
-			gfx_free_image(img2);
-		}
-	} while(0);
-#else
 	gfx_set_alpha(img, (255 * (fade_step_nr + 1)) / ALPHA_STEPS);
 	gfx_draw(fade_bg, 0, 0);
 	gfx_draw(img, 0, 0);
-#endif
 	game_cursor(CURSOR_DRAW);
 	gfx_flip();
 	fade_step_nr ++;
@@ -3891,11 +4075,18 @@ int gfx_init(void)
 		fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
 		return -1;
 	}
+	if (!(images = cache_init(-1, gfx_free_image))) {
+		fprintf(stderr, "Can't init cache subsystem.\n");
+		gfx_done();
+		return -1;
+	}
 	return 0;
 }
 
 void gfx_done(void)
 {
+	cache_free(images);
+	images = NULL;
 	SDL_Quit();
 }
 
@@ -3912,4 +4103,9 @@ void gfx_del_timer(gtimer_t han)
 {
 	if (han)
 		SDL_RemoveTimer((SDL_TimerID)han);
+}
+
+unsigned long gfx_ticks(void)
+{
+	return SDL_GetTicks();
 }

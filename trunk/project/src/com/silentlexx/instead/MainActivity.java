@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
@@ -317,6 +318,8 @@ public class MainActivity extends Activity {
 		}
 		;
 
+
+
 		String line;
 
 		try {
@@ -363,8 +366,10 @@ public class MainActivity extends Activity {
 
 	private void checkRC() {
 		if (checkInstall()) {
-			String path = Globals.getOutFilePath(Globals.Options);
-			InputStream checkFile = null;
+			if(!(new File( Globals.getOutFilePath(Globals.Options))).exists()){
+				CreateRC();;
+			}
+			/*InputStream checkFile = null;
 			try {
 				checkFile = new FileInputStream(path);
 			} catch (FileNotFoundException e) {
@@ -375,7 +380,7 @@ public class MainActivity extends Activity {
 			if (checkFile == null) {
 				CreateRC();
 			}
-
+			*/
 		} else {
 			(new File(Globals.getOutFilePath(Globals.Options))).delete();
 			loadData();
@@ -386,13 +391,32 @@ public class MainActivity extends Activity {
 	private String getConf() {
 		String locale = null;
 		if (Locale.getDefault().toString().equals("ru_RU")
-				|| Locale.getDefault().toString().equals("ru")
-				|| Locale.getDefault().toString().equals("ua_UA")
-				|| Locale.getDefault().toString().equals("ua")) {
-			locale = "lang = ru\ngame = tutorial2\n";
-		} else {
-			locale = "lang = en\ngame = tutorial2-en\n";
+				|| Locale.getDefault().toString().equals("ru")) {
+			locale = "lang = ru\n";
+		}		
+		else if (Locale.getDefault().toString().equals("uk_UA")
+				|| Locale.getDefault().toString().equals("uk")) {
+			locale = "lang = ua\n";
+		}		
+		else if (Locale.getDefault().toString().equals("it_IT")
+				|| Locale.getDefault().toString().equals("it")
+				|| Locale.getDefault().toString().equals("it_CH")) {
+			locale = "lang = it\n";
 		}
+		else if (Locale.getDefault().toString().equals("es_ES")
+				|| Locale.getDefault().toString().equals("es")) {
+			locale = "lang = es\n";
+		}
+		else if (Locale.getDefault().toString().equals("be_BE")
+				|| Locale.getDefault().toString().equals("be")) {
+			locale = "lang = ru\n";
+		}
+		else {
+			locale = "lang = en\n";
+		}
+
+		
+		
 
 		String res = getRes();
 		
@@ -423,13 +447,20 @@ public class MainActivity extends Activity {
 			theme = "theme = android-xVGA\n";
 		} else
 
+//		if (res.toLowerCase().matches("(.*)1280x800(.*)")) {
+//		} else
 		{
-			theme = "theme = android-WxVGA\n";
+			if(Build.VERSION.SDK_INT > 10){
+				theme = "theme = android-Honeycomb\n";
+			} else {
+				theme = "theme = android-WxVGA\n";
+			}
+			
 		}
 
 		// Log.d(Globals.TAG, "Res choosen: " + s);
 
-		String s = "kbd = 2\nautosave = 1\nowntheme = 0\nhl = 1\nclick = 1\nmusic = 1\n"
+		String s = "game = tutorial3\nkbd = 2\nautosave = 1\nowntheme = 0\nhl = 1\nclick = 1\nmusic = 1\nfscale = 12\n"
 				+ locale
 				+ theme
 				+ "mode = " + res + "\n";
@@ -451,16 +482,17 @@ public class MainActivity extends Activity {
 	private void CreateRC() {
 
 		String path = Globals.getOutFilePath(Globals.Options);
-		InputStream checkFile = null;
-		OutputStream out = null;
-		try {
+	//	InputStream checkFile = null;
+
+	/*	try {
 			checkFile = new FileInputStream(path);
 		} catch (FileNotFoundException e) {
 		} catch (SecurityException e) {
 		}
 		;
-
-		if (checkFile == null) {
+	*/
+		if (!(new File(path)).exists()) {
+			OutputStream out = null;			
 			byte buf[] = getConf().getBytes();
 			try {
 				out = new FileOutputStream(path);

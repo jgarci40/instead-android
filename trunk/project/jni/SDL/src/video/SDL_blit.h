@@ -1,41 +1,59 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
 
 #ifndef _SDL_blit_h
 #define _SDL_blit_h
 
+#ifdef __MINGW32__
+#include <_mingw.h>
+#endif
+
+#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
+#include <intrin.h>
+#else
+#ifdef __MMX__
+#include <mmintrin.h>
+#endif
+#ifdef __3dNOW__
+#include <mm3dnow.h>
+#endif
+#ifdef __SSE__
+#include <xmmintrin.h>
+#endif
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
+#endif
+
 #include "SDL_cpuinfo.h"
 #include "SDL_endian.h"
 #include "SDL_surface.h"
-
-/* Table to do pixel byte expansion */
-extern Uint8* SDL_expand_byte[9];
 
 /* SDL blit copy flags */
 #define SDL_COPY_MODULATE_COLOR     0x00000001
 #define SDL_COPY_MODULATE_ALPHA     0x00000002
 #define SDL_COPY_BLEND              0x00000010
 #define SDL_COPY_ADD                0x00000020
-#define SDL_COPY_MOD                0x00000040
 #define SDL_COPY_COLORKEY           0x00000100
 #define SDL_COPY_NEAREST            0x00000200
 #define SDL_COPY_RLE_DESIRED        0x00001000
@@ -92,7 +110,7 @@ typedef struct SDL_BlitMap
 
     /* the version count matches the destination; mismatch indicates
        an invalid mapping */
-    Uint32 palette_version;
+    unsigned int format_version;
 } SDL_BlitMap;
 
 /* Functions found in SDL_blit.c */
@@ -116,24 +134,29 @@ extern SDL_BlitFunc SDL_CalculateBlitA(SDL_Surface * surface);
 #define DECLARE_ALIGNED(t,v,a)  t v
 #endif
 
+#define FORMAT_EQUAL(A, B)						\
+    ((A)->BitsPerPixel == (B)->BitsPerPixel				\
+     && ((A)->Rmask == (B)->Rmask) && ((A)->Amask == (B)->Amask))
+
 /* Load pixel of the specified format from a buffer and get its R-G-B values */
+/* FIXME: rescale values to 0..255 here? */
 #define RGB_FROM_PIXEL(Pixel, fmt, r, g, b)				\
 {									\
-	r = SDL_expand_byte[fmt->Rloss][((Pixel&fmt->Rmask)>>fmt->Rshift)]; \
-	g = SDL_expand_byte[fmt->Gloss][((Pixel&fmt->Gmask)>>fmt->Gshift)]; \
-	b = SDL_expand_byte[fmt->Bloss][((Pixel&fmt->Bmask)>>fmt->Bshift)]; \
+	r = (((Pixel&fmt->Rmask)>>fmt->Rshift)<<fmt->Rloss); 		\
+	g = (((Pixel&fmt->Gmask)>>fmt->Gshift)<<fmt->Gloss); 		\
+	b = (((Pixel&fmt->Bmask)>>fmt->Bshift)<<fmt->Bloss); 		\
 }
 #define RGB_FROM_RGB565(Pixel, r, g, b)					\
 {									\
-	r = SDL_expand_byte[3][((Pixel&0xF800)>>11)];		 			\
-	g = SDL_expand_byte[2][((Pixel&0x07E0)>>5)]; 					\
-	b = SDL_expand_byte[3][(Pixel&0x001F)]; 					\
+	r = (((Pixel&0xF800)>>11)<<3);		 			\
+	g = (((Pixel&0x07E0)>>5)<<2); 					\
+	b = ((Pixel&0x001F)<<3); 					\
 }
 #define RGB_FROM_RGB555(Pixel, r, g, b)					\
 {									\
-	r = SDL_expand_byte[3][((Pixel&0x7C00)>>10)];		 			\
-	g = SDL_expand_byte[3][((Pixel&0x03E0)>>5)]; 					\
-	b = SDL_expand_byte[3][(Pixel&0x001F)]; 					\
+	r = (((Pixel&0x7C00)>>10)<<3);		 			\
+	g = (((Pixel&0x03E0)>>5)<<3); 					\
+	b = ((Pixel&0x001F)<<3); 					\
 }
 #define RGB_FROM_RGB888(Pixel, r, g, b)					\
 {									\
@@ -163,7 +186,7 @@ do {									   \
 		break;							   \
 									   \
 		default:						   \
-		        Pixel = 0; /* stop gcc complaints */		   \
+		        Pixel; /* stop gcc complaints */		   \
 		break;							   \
 	}								   \
 } while (0)
@@ -177,7 +200,6 @@ do {									   \
 		break;							   \
 									   \
 		case 3:	{						   \
-            Pixel = 0;                  \
                         if (SDL_BYTEORDER == SDL_LIL_ENDIAN) {		   \
 			        r = *((buf)+fmt->Rshift/8);		   \
 				g = *((buf)+fmt->Gshift/8);		   \
@@ -196,9 +218,7 @@ do {									   \
 		break;							   \
 									   \
 		default:						   \
-                /* stop gcc complaints */		   \
-		        Pixel = 0;              \
-                r = g = b = 0;          \
+		        Pixel; /* stop gcc complaints */		   \
 		break;							   \
 	}								   \
 } while (0)
@@ -208,8 +228,7 @@ do {									   \
 {									\
 	Pixel = ((r>>fmt->Rloss)<<fmt->Rshift)|				\
 		((g>>fmt->Gloss)<<fmt->Gshift)|				\
-		((b>>fmt->Bloss)<<fmt->Bshift)| \
-        fmt->Amask;				\
+		((b>>fmt->Bloss)<<fmt->Bshift);				\
 }
 #define RGB565_FROM_RGB(Pixel, r, g, b)					\
 {									\
@@ -246,7 +265,7 @@ do {									   \
 			Uint16 Pixel;					\
 									\
 			PIXEL_FROM_RGB(Pixel, fmt, r, g, b);		\
-			*((Uint16 *)(buf)) = Pixel;		\
+			*((Uint16 *)(buf)) = Pixel;			\
 		}							\
 		break;							\
 									\
@@ -272,14 +291,51 @@ do {									   \
 		break;							\
 	}								\
 }
+#define ASSEMBLE_RGB_AMASK(buf, bpp, fmt, r, g, b, Amask)		\
+{									\
+	switch (bpp) {							\
+		case 2: {						\
+			Uint16 *bufp;					\
+			Uint16 Pixel;					\
+									\
+			bufp = (Uint16 *)buf;				\
+			PIXEL_FROM_RGB(Pixel, fmt, r, g, b);		\
+			*bufp = Pixel | (*bufp & Amask);		\
+		}							\
+		break;							\
+									\
+		case 3: {						\
+                        if (SDL_BYTEORDER == SDL_LIL_ENDIAN) {		\
+			        *((buf)+fmt->Rshift/8) = r;		\
+				*((buf)+fmt->Gshift/8) = g;		\
+				*((buf)+fmt->Bshift/8) = b;		\
+			} else {					\
+			        *((buf)+2-fmt->Rshift/8) = r;		\
+				*((buf)+2-fmt->Gshift/8) = g;		\
+				*((buf)+2-fmt->Bshift/8) = b;		\
+			}						\
+		}							\
+		break;							\
+									\
+		case 4: {						\
+			Uint32 *bufp;					\
+			Uint32 Pixel;					\
+									\
+			bufp = (Uint32 *)buf;				\
+			PIXEL_FROM_RGB(Pixel, fmt, r, g, b);		\
+			*bufp = Pixel | (*bufp & Amask);		\
+		}							\
+		break;							\
+	}								\
+}
 
 /* FIXME: Should we rescale alpha into 0..255 here? */
 #define RGBA_FROM_PIXEL(Pixel, fmt, r, g, b, a)				\
 {									\
-	r = SDL_expand_byte[fmt->Rloss][((Pixel&fmt->Rmask)>>fmt->Rshift)]; \
-	g = SDL_expand_byte[fmt->Gloss][((Pixel&fmt->Gmask)>>fmt->Gshift)]; \
-	b = SDL_expand_byte[fmt->Bloss][((Pixel&fmt->Bmask)>>fmt->Bshift)]; \
-	a = SDL_expand_byte[fmt->Aloss][((Pixel&fmt->Amask)>>fmt->Ashift)]; \
+	r = ((Pixel&fmt->Rmask)>>fmt->Rshift)<<fmt->Rloss; 		\
+	g = ((Pixel&fmt->Gmask)>>fmt->Gshift)<<fmt->Gloss; 		\
+	b = ((Pixel&fmt->Bmask)>>fmt->Bshift)<<fmt->Bloss; 		\
+	a = ((Pixel&fmt->Amask)>>fmt->Ashift)<<fmt->Aloss;	 	\
 }
 #define RGBA_FROM_8888(Pixel, fmt, r, g, b, a)	\
 {						\
@@ -325,7 +381,6 @@ do {									   \
 		break;							   \
 									   \
 		case 3:	{						   \
-            Pixel = 0; \
                         if (SDL_BYTEORDER == SDL_LIL_ENDIAN) {		   \
 			        r = *((buf)+fmt->Rshift/8);		   \
 				g = *((buf)+fmt->Gshift/8);		   \
@@ -345,9 +400,7 @@ do {									   \
 		break;							   \
 									   \
 		default:						   \
-                /* stop gcc complaints */		   \
-		        Pixel = 0;              \
-                r = g = b = a = 0;      \
+		        Pixel; /* stop gcc complaints */		   \
 		break;							   \
 	}								   \
 } while (0)
@@ -367,7 +420,7 @@ do {									   \
 			Uint16 Pixel;					\
 									\
 			PIXEL_FROM_RGBA(Pixel, fmt, r, g, b, a);	\
-			*((Uint16 *)(buf)) = Pixel;		\
+			*((Uint16 *)(buf)) = Pixel;			\
 		}							\
 		break;							\
 									\

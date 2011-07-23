@@ -1,11 +1,11 @@
 [Setup]
 AppName=INSTEAD-KIT
-AppVerName=INSTEAD 1.3.5
+AppVerName=INSTEAD 1.4.4
 DefaultDirName={pf}\Pinebrush games\INSTEAD
 DefaultGroupName=Pinebrush games
 UninstallDisplayIcon={app}\sdl-instead.exe
 OutputDir=.
-OutputBaseFilename=instead-kit-1.3.5
+OutputBaseFilename=instead-kit-1.4.4
 AllowNoIcons=true
 
 [Languages]
@@ -19,9 +19,7 @@ Source: qt_ru.qm; DestDir: {app}
 Source: appdata\*; DestDir: {app}\appdata
 
 Source: Microsoft.VC80.CRT\*; DestDir: {app}\Microsoft.VC80.CRT
-Source: games\tutorial2\*; DestDir: {app}\games\tutorial2
-Source: games\tutorial2-en\*; DestDir: {app}\games\tutorial2-en
-Source: games\tutorial2-es\*; DestDir: {app}\games\tutorial2-es
+Source: games\tutorial3\*; DestDir: {app}\games\tutorial3
 Source: icon\*; DestDir: {app}\icon
 Source: doc\*; DestDir: {app}\doc
 Source: doc\modules\*; DestDir: {app}\doc\modules

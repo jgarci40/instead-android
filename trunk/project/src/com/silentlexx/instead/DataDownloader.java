@@ -48,7 +48,7 @@ class DataDownloader extends Thread {
 
 		String path = null;
 		
-		(new File("/sdcard/" + Globals.ApplicationName)).mkdir();
+		(new File(Globals.getStorage() + Globals.ApplicationName)).mkdir();
 		
 		Globals.delete(new File(Globals.getOutFilePath("stead")));
 		Globals.delete(new File(Globals.getOutFilePath("themes")));

@@ -1,22 +1,23 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
 
@@ -53,7 +54,7 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
     incx = (info->src_w << 16) / info->dst_w;
 
     while (info->dst_h--) {
-        Uint8 *src = 0;
+        Uint8 *src;
         Uint8 *dst = (Uint8 *) info->dst;
         int n = info->dst_w;
         srcx = -1;
@@ -116,7 +117,7 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
                     srcB = (srcB * srcA) / 255;
                 }
             }
-            switch (flags & (SDL_COPY_BLEND | SDL_COPY_ADD | SDL_COPY_MOD)) {
+            switch (flags & (SDL_COPY_BLEND | SDL_COPY_ADD)) {
             case 0:
                 dstR = srcR;
                 dstG = srcG;
@@ -138,11 +139,6 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
                 dstB = srcB + dstB;
                 if (dstB > 255)
                     dstB = 255;
-                break;
-            case SDL_COPY_MOD:
-                dstR = (srcR * dstR) / 255;
-                dstG = (srcG * dstG) / 255;
-                dstB = (srcB * dstB) / 255;
                 break;
             }
             if (dst_fmt->Amask) {

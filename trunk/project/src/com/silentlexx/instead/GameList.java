@@ -4,9 +4,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 
@@ -18,6 +20,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import android.util.Log;
 
 //import android.util.Log;
 
@@ -45,10 +49,10 @@ public class GameList {
 	protected static final String ITEM_DESCURL = "descurl";
 	protected static final String ITEM_LANG = "lang";
 	protected static final String ITEM_SIZE = "size";
-
+	
 	private boolean ok = false;
 
-	protected static final int MAX = 999;
+	protected static final int MAX = 99;
 
 	private String xml;
 
@@ -64,24 +68,80 @@ public class GameList {
 	private int[] flag = new int[MAX];
 	private Document document;
 	private GameMananger Parent;
+	private String fflags;
 
-	GameList(GameMananger _parent, String f) {
+	
+	GameList(GameMananger _parent, String f, boolean fscan) {
 		Parent = _parent;
-		xml = Globals.getOutFilePath(f);
+	
+		fflags = Parent.getFilesDir()+"/"+f.substring(0, f.length()-3)+"db";
+
+	
+		xml = Parent.getFilesDir()+"/"+f;		
+		
 		ok = readXML();
 		if (isOK()) {
 			parseXML();
+			if (!(new File(fflags)).exists() || fscan){
+				   getFlags();
+				   
+			}
 			setFlags();
-			//Log.d(Globals.TAG, "XML parsed!");
-		}
+		}		
 	}
+
 
 	public boolean isOK() {
 		return ok;
 	}
 
-	private void setFlags() {
+	private void setFlags(){
+		
+		int i = 0;
+		
+		BufferedReader input = null;
+		try {
+			input = new BufferedReader(new InputStreamReader(
+					new FileInputStream(new File(fflags)), "UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+		} catch (FileNotFoundException e) {
+		}
+
+		try {
+			String line = null;
+			while ((line = input.readLine()) != null) {
+			  
+				flag[i]=Integer.parseInt(line.trim());
+				i++;	
+				//Log.d("LEXX", line);
+				
+			}
+			} catch (NullPointerException e) {
+			} catch (IOException e) {
+			}
+
+
+	try {
+		input.close();
+	} catch (IOException e) {
+	}
+		
+	}
+	
+	public void flagsRescan(){
+		getFlags();
+	}
+	
+	private void getFlags() {
+		//Log.d("LEXX", "RESCAN");
+		
+		(new File(fflags)).delete();
+		
 		String path;
+		int ff;
+		
+		String buf = "";
+		
 		for (int i = 0; i < getLength(); i++) {
 			path = Globals.getOutFilePath(Globals.GameDir + name[i]
 					+ "/main.lua");
@@ -89,16 +149,33 @@ public class GameList {
 			if (checkFile(path)) {
 
 				if (getVerFromFile(path, i)) {
-					flag[i] = INSTALLED;
+					ff = INSTALLED;
 				} else {
-					flag[i] = UPDATE;
+					ff = UPDATE;
 				}
 
 			} else {
-				flag[i] = NEW;
+				ff = NEW;
 			}
-
+			
+			buf = buf + Integer.toString(ff)+"\n";
 		}
+
+		OutputStream out = null;
+		byte buff[] = buf.getBytes();
+		try {
+			out = new FileOutputStream(fflags);
+			out.write(buff);
+			out.close();
+		} catch (FileNotFoundException e) {
+		} catch (SecurityException e) {
+		} catch (java.io.IOException e) {
+			Log.e("Instead ERROR", "Error writing file " + fflags);
+			return;
+		}
+		;
+		
+		
 	}
 
 	private boolean getVerFromFile(String path, int n) {
@@ -312,5 +389,7 @@ public class GameList {
 	public int getLength() {
 		return length;
 	}
+
+
 
 }

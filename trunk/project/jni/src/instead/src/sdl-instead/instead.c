@@ -1,5 +1,7 @@
 #include "externals.h"
 #include "internals.h"
+#include "list.h"
+#include "idf.h"
 
 #ifndef STEAD_PATH
 #define STEAD_PATH 	"./stead"
@@ -72,6 +74,22 @@ static int docall (lua_State *L)
 
 static int dofile (lua_State *L, const char *name) {
 	int status = luaL_loadfile(L, name) || docall(L);
+	return report(L, status);
+}
+
+static const char *idf_reader(lua_State *L, void *data, size_t *size)
+{
+	static char buff[4096];
+	int rc;
+	rc = idf_read((idff_t)data, buff, 1, sizeof(buff));
+	*size = rc;
+	if (!rc)
+		return NULL;
+	return buff;
+}
+
+static int dofile_idf (lua_State *L, idff_t idf, const char *name) {
+	int status = lua_load(L, idf_reader, idf, name) || docall(L);
 	return report(L, status);
 }
 
@@ -311,7 +329,13 @@ char *togame(const char *s)
 
 int instead_load(char *game)
 {
-   	if (dofile(L, game)) {
+	idff_t idf = idf_open(game_idf, game);
+	if (idf) {
+		int rc = dofile_idf(L, idf, game);
+		idf_close(idf);
+		if (rc)
+			return -1;
+	} else if (dofile(L, dirpath(game))) {
 		return -1;
 	}
 	instead_clear();
@@ -328,6 +352,7 @@ typedef struct LoadF {
 	int extraline;
 	unsigned char byte;
 	FILE *f;
+	idff_t idff;
 	int enc;
 	unsigned char buff[4096];
 } LoadF;
@@ -341,8 +366,17 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
 		*size = 1;
 		return "\n";
 	}
-	if (feof(lf->f)) return NULL;
-	*size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+
+	if (lf->f && feof(lf->f))
+		return NULL;
+	if (lf->idff && idf_eof(lf->idff))
+		return NULL;
+
+	if (lf->idff)
+		*size = idf_read(lf->idff, lf->buff, 1, sizeof(lf->buff));
+	else
+		*size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+
 	if (lf->enc) {
 		for (i = 0; i < *size; i ++) {
 			unsigned char b = lf->buff[i];
@@ -368,13 +402,26 @@ static int loadfile (lua_State *L, const char *filename, int enc) {
 	int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
 	lf.extraline = 0;
 	lua_pushfstring(L, "@%s", filename);
-	lf.f = fopen(filename, "rb");
+	lf.idff = idf_open(game_idf, filename);
+	if (!lf.idff)
+		lf.f = fopen(dirpath(filename), "rb");
+	else
+		lf.f = NULL;
 	lf.byte = 0xcc;
 	lf.enc = enc;
-	if (lf.f == NULL) return errfile(L, "open", fnameindex);
+	if (lf.f == NULL && lf.idff == NULL) return errfile(L, "open", fnameindex);
 	status = lua_load(L, getF, &lf, lua_tostring(L, -1));
-	readstatus = ferror(lf.f);
-	if (filename) fclose(lf.f);  /* close file (even in case of errors) */
+
+	if (lf.f)
+		readstatus = ferror(lf.f);
+	else
+		readstatus = idf_error(lf.idff);
+
+	if (filename) {
+		if (lf.f)
+			fclose(lf.f);  /* close file (even in case of errors) */
+		idf_close(lf.idff);
+	}
 	if (readstatus) {
 		lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
 		return errfile(L, "read", fnameindex);
@@ -387,7 +434,7 @@ static int loadfile (lua_State *L, const char *filename, int enc) {
 static int luaB_doencfile (lua_State *L) {
 	const char *fname = luaL_optstring(L, 1, NULL);
 	int n = lua_gettop(L);
-	if (loadfile(L, dirpath(fname), 1) != 0) lua_error(L);
+	if (loadfile(L, fname, 1) != 0) lua_error(L);
 	lua_call(L, 0, LUA_MULTRET);
 	return lua_gettop(L) - n;
 }
@@ -395,7 +442,7 @@ static int luaB_doencfile (lua_State *L) {
 static int luaB_dofile (lua_State *L) {
 	const char *fname = luaL_optstring(L, 1, NULL);
 	int n = lua_gettop(L);
-	if (loadfile(L, dirpath(fname), 0) != 0) lua_error(L);
+	if (loadfile(L, fname, 0) != 0) lua_error(L);
 	lua_call(L, 0, LUA_MULTRET);
 	return lua_gettop(L) - n;
 }
@@ -458,6 +505,7 @@ static int luaB_get_steadpath(lua_State *L) {
 
 
 extern void mouse_reset(int hl); /* too bad */
+extern void mouse_restore(void);
 
 static void instead_timer_do(void *data)
 {
@@ -472,7 +520,9 @@ static void instead_timer_do(void *data)
 	if (!p)
 		goto out;
 	mouse_reset(0);
+//	fprintf(stderr, "cmd =%s\n", p);
 	game_cmd(p); free(p);
+	mouse_restore();
 	game_cursor(CURSOR_ON);
 out:
 	instead_timer_nr = 0;
@@ -531,6 +581,964 @@ static int luaB_theme_var(lua_State *L) {
 extern int dir_iter_factory (lua_State *L);
 extern int luaopen_lfs (lua_State *L);
 
+static LIST_HEAD(sprites);
+
+static LIST_HEAD(fonts);
+
+typedef struct {
+	struct list_head list;
+	char	*name;
+	fnt_t	fnt;
+} _fnt_t;
+
+typedef struct {
+	struct list_head list;
+	char	*name;
+	img_t	img;
+} _spr_t;
+
+static void sprites_free(void)
+{
+//	fprintf(stderr, "sprites free \n");
+	while (!list_empty(&sprites)) {
+		_spr_t *sp = (_spr_t*)(sprites.next);
+		free(sp->name);
+		cache_forget(gfx_image_cache(), sp->img);
+		list_del(&sp->list);
+		free(sp);
+	}
+	while (!list_empty(&fonts)) {
+		_fnt_t *fn = (_fnt_t*)(fonts.next);
+		fnt_free(fn->fnt);
+		free(fn->name);
+		list_del(&fn->list);
+		free(fn);
+	}
+	game_pict_modify(NULL);
+	cache_shrink(gfx_image_cache());
+}
+
+static _spr_t *sprite_lookup(const char *name)
+{
+	struct list_head *pos;
+	_spr_t *sp;
+	list_for_each(pos, &sprites) {
+		sp = (_spr_t*)pos;
+		if (!strcmp(name, sp->name)) {
+			list_move(&sp->list, &sprites); // move it on head
+			return sp;
+		}
+	}
+	return NULL;
+}
+
+static _fnt_t *font_lookup(const char *name)
+{
+	struct list_head *pos;
+	_fnt_t *fn;
+	list_for_each(pos, &fonts) {
+		fn = (_fnt_t*)pos;
+		if (!strcmp(name, fn->name)) {
+			list_move(&fn->list, &fonts); // move it on head
+			return fn;
+		}
+	}
+	return NULL;
+}
+
+static _spr_t *sprite_new(const char *name, img_t img)
+{
+	_spr_t *sp;
+	sp = malloc(sizeof(_spr_t));
+	if (!sp)
+		return NULL;
+	INIT_LIST_HEAD(&sp->list);
+	sp->name = strdup(name);
+	if (!sp->name) {
+		free(sp);
+		return NULL;
+	}
+	sp->img = img;
+	if (cache_add(gfx_image_cache(), name, img)) {
+		free(sp->name);
+		free(sp);
+		return NULL;
+	}
+//	fprintf(stderr, "added: %s\n", name);
+	list_add(&sp->list, &sprites);
+	return sp;
+}
+
+static _fnt_t *font_new(const char *name, fnt_t fnt)
+{
+	_fnt_t *fn;
+	fn = malloc(sizeof(_fnt_t));
+	if (!fn)
+		return NULL;
+	INIT_LIST_HEAD(&fn->list);
+	fn->name = strdup(name);
+	if (!fn->name) {
+		free(fn);
+		return NULL;
+	}
+	fn->fnt = fnt;
+	list_add(&fn->list, &fonts);
+	return fn;
+}
+
+static void sprite_name(const char *name, char *sname, int size)
+{
+	unsigned long h = 0;
+	if (!sname || !size)
+		return;
+	h = hash_string(name);
+	do { /* new uniq name */
+		snprintf(sname, size, "spr:%lx", h);
+		h ++;
+	} while (sprite_lookup(sname) || cache_lookup(gfx_image_cache(), sname));
+	sname[size - 1] = 0;
+}
+
+static void font_name(const char *name, char *sname, int size)
+{
+	unsigned long h = 0;
+	if (!sname || !size)
+		return;
+	h = hash_string(name);
+	do { /* new uniq name */
+		snprintf(sname, size, "fnt:%lx", h);
+		h ++;
+	} while (font_lookup(sname));
+	sname[size - 1] = 0;
+}
+
+static int _free_sprite(const char *key);
+
+static int luaB_free_sprites(lua_State *L) {
+	sprites_free();
+	return 0;
+}
+
+static int luaB_load_sprite(lua_State *L) {
+	img_t img = NULL;
+	_spr_t *sp;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+
+	const char *fname = luaL_optstring(L, 1, NULL);
+	const char *desc = luaL_optstring(L, 2, NULL);
+
+	if (!fname)
+		return 0;
+
+	img = gfx_load_image((char*)fname);
+	if (img)
+		img = gfx_display_alpha(img); /*speed up */
+	if (img)
+		theme_img_scale(&img);
+
+	if (!img)
+		goto err;
+
+	if (!desc || sprite_lookup(desc)) {
+		key = sname;
+		sprite_name(fname, sname, sizeof(sname));
+	} else
+		key = desc;
+	sp = sprite_new(key, img);
+	if (!sp)
+		goto err;
+
+	lua_pushstring(L, key);
+	return 1;
+err:
+	gfx_free_image(img);
+	return 0;
+}
+
+static int luaB_load_font(lua_State *L) {
+	fnt_t fnt = NULL;
+	_fnt_t *fn;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+	struct game_theme *t = &game_theme;
+
+	const char *fname = luaL_optstring(L, 1, NULL);
+	int sz = luaL_optnumber(L, 2, t->font_size) * game_theme.scale;
+	const char *desc = luaL_optstring(L, 3, NULL);
+	if (!fname)
+		return 0;
+
+	fnt = fnt_load((char*)fname, sz);
+
+	if (!fnt)
+		return 0;
+
+	if (!desc || font_lookup(desc)) {
+		key = sname;
+		font_name(fname, sname, sizeof(sname));
+	} else
+		key = desc;
+
+	fn = font_new(key, fnt);
+	if (!fn)
+		goto err;
+
+	lua_pushstring(L, key);
+	return 1;
+err:
+	fnt_free(fnt);
+	return 0;
+}
+
+static int luaB_text_size(lua_State *L) {
+	_fnt_t *fn;
+	int w = 0, h = 0;
+
+	const char *font = luaL_optstring(L, 1, NULL);
+	const char *text = luaL_optstring(L, 2, NULL);
+
+	if (!font)
+		return 0;
+
+	fn = font_lookup(font);
+	
+	if (!fn)
+		return 0;
+	if (!text) {
+		w = 0;
+		h = ceil((float)fnt_height(fn->fnt) / game_theme.scale);
+	} else {
+		txt_size(fn->fnt, text, &w, &h);
+		w = ceil((float)w / game_theme.scale);
+		h = ceil((float)h / game_theme.scale);
+	}
+	lua_pushnumber(L, w);
+	lua_pushnumber(L, h);
+	return 2;
+}
+
+static int luaB_font_size_scaled(lua_State *L) {
+	int sz = luaL_optnumber(L, 1, game_theme.font_size);
+	lua_pushnumber(L, FONT_SZ(sz));
+	return 1;
+}
+
+static int luaB_text_sprite(lua_State *L) {
+	img_t img = NULL;
+	_spr_t *sp;
+	_fnt_t *fn;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+
+	const char *font = luaL_optstring(L, 1, NULL);
+	const char *text = luaL_optstring(L, 2, NULL);
+	char txtkey[32];
+	const char *color = luaL_optstring(L, 3, NULL);
+	int style = luaL_optnumber(L, 4, 0);
+	const char *desc = luaL_optstring(L, 5, NULL);
+
+	color_t col = { .r = game_theme.fgcol.r, .g = game_theme.fgcol.g, .b = game_theme.fgcol.b };
+
+	if (!font)
+		return 0;
+	if (color)
+		gfx_parse_color (color, &col);
+	if (!text)
+		text = "";
+
+	fn = font_lookup(font);
+
+	if (!fn)
+		return 0;
+
+	fnt_style(fn->fnt, style);
+
+	img = fnt_render(fn->fnt, text, col);
+	if (img)
+		img = gfx_display_alpha(img); /*speed up */
+
+	if (!img)
+		return 0;
+	
+	if (!desc || sprite_lookup(desc)) {
+		key = sname;
+		strncpy(txtkey, text, sizeof(txtkey));
+		txtkey[sizeof(txtkey) - 1] = 0;
+		sprite_name(txtkey, sname, sizeof(sname));
+	} else
+		key = desc;
+	
+	sp = sprite_new(key, img);
+
+	if (!sp)
+		goto err;
+
+	lua_pushstring(L, key);
+	return 1;
+err:
+	gfx_free_image(img);
+	return 0;
+}
+
+static img_t grab_sprite(const char *dst, int *xoff, int *yoff)
+{
+	img_t d;
+	if (DIRECT_MODE && !strcmp(dst, "screen")) {
+		d = gfx_screen(NULL);
+		*xoff = game_theme.xoff;
+		*yoff = game_theme.yoff;
+	} else {
+		*xoff = 0;
+		*yoff = 0;
+		d = cache_lookup(gfx_image_cache(), dst);
+	}
+	return d;
+}
+
+
+static int luaB_sprite_size(lua_State *L) {
+	img_t s = NULL;
+	float v;
+	int w, h;
+	int xoff, yoff;
+	const char *src = luaL_optstring(L, 1, NULL);
+	if (!src)
+		return 0;
+	s = grab_sprite(src, &xoff, &yoff);
+	if (!s)
+		return 0;
+	
+	v = game_theme.scale;
+
+	w = ceil ((float)(gfx_img_w(s) - xoff * 2) / v);
+	h = ceil ((float)(gfx_img_h(s) - yoff * 2) / v);
+
+	lua_pushnumber(L, w);
+	lua_pushnumber(L, h);
+	return 2;
+}
+
+static int luaB_draw_sprite(lua_State *L) {
+	img_t s, d;
+	img_t img2 = NULL;
+	float v;
+	const char *src = luaL_optstring(L, 1, NULL);
+	int x = luaL_optnumber(L, 2, 0);
+	int y = luaL_optnumber(L, 3, 0);
+	int w = luaL_optnumber(L, 4, -1);
+	int h = luaL_optnumber(L, 5, -1);
+	const char *dst = luaL_optstring(L, 6, NULL);
+	int xx = luaL_optnumber(L, 7, 0);
+	int yy = luaL_optnumber(L, 8, 0);
+	int alpha = luaL_optnumber(L, 9, 255);
+	int xoff = 0, yoff = 0;
+	int xoff0 = 0, yoff0 = 0;
+	if (!src || !dst)
+		return 0;
+
+	s = grab_sprite(src, &xoff0, &yoff0);
+
+	d = grab_sprite(dst, &xoff, &yoff);	
+
+	if (!s || !d)
+		return 0;
+
+	v = game_theme.scale;
+
+	if (v != 1.0f) {
+		x *= v;
+		y *= v;
+		if (w != -1)
+			w = ceil(w * v);
+		if (h != -1)
+			h = ceil(h * v);
+		xx *= v;
+		yy *= v;
+	}
+
+	if (w == -1)
+		w = gfx_img_w(s) - 2 * xoff0;
+	if (h == -1)
+		h = gfx_img_h(s) - 2 * yoff0;
+
+	game_pict_modify(d);
+
+	if (alpha != 255) {
+		img2 = gfx_alpha_img(s, alpha);
+		if (img2)
+			s = img2;
+	}
+	gfx_clip(game_theme.xoff, game_theme.yoff, game_theme.w - 2*game_theme.xoff, game_theme.h - 2*game_theme.yoff);
+	gfx_draw_from(s, x + xoff0, y + yoff0, w, h, d, xx + xoff, yy + yoff);
+	gfx_noclip();
+	gfx_free_image(img2);
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int luaB_copy_sprite(lua_State *L) {
+	img_t s, d;
+	img_t img2 = NULL;
+	float v;
+	const char *src = luaL_optstring(L, 1, NULL);
+	int x = luaL_optnumber(L, 2, 0);
+	int y = luaL_optnumber(L, 3, 0);
+	int w = luaL_optnumber(L, 4, -1);
+	int h = luaL_optnumber(L, 5, -1);
+	const char *dst = luaL_optstring(L, 6, NULL);
+	int xx = luaL_optnumber(L, 7, 0);
+	int yy = luaL_optnumber(L, 8, 0);
+	int xoff = 0, yoff = 0;
+	int xoff0 = 0, yoff0 = 0;
+	if (!src || !dst)
+		return 0;
+
+	s = grab_sprite(src, &xoff0, &yoff0);
+
+	d = grab_sprite(dst, &xoff, &yoff);	
+
+	if (!s || !d)
+		return 0;
+
+	v = game_theme.scale;
+
+	if (v != 1.0f) {
+		x *= v;
+		y *= v;
+		if (w != -1)
+			w = ceil(w * v);
+		if (h != -1)
+			h = ceil(h * v);
+		xx *= v;
+		yy *= v;
+	}
+
+	if (w == -1)
+		w = gfx_img_w(s) - 2 * xoff0;
+	if (h == -1)
+		h = gfx_img_h(s) - 2 * yoff0;
+
+	game_pict_modify(d);
+
+	gfx_clip(game_theme.xoff, game_theme.yoff, game_theme.w - game_theme.xoff * 2, game_theme.h - game_theme.yoff * 2);
+	gfx_copy_from(s, x + xoff0, y + yoff0, w, h, d, xx + xoff, yy + yoff);
+	gfx_noclip();
+	gfx_free_image(img2);
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+
+static int luaB_alpha_sprite(lua_State *L) {
+	_spr_t *sp;
+	img_t s;
+	img_t img2 = NULL;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+
+	const char *src = luaL_optstring(L, 1, NULL);
+	int alpha = luaL_optnumber(L, 2, 255);
+	const char *desc = luaL_optstring(L, 3, NULL);
+
+	if (!src)
+		return 0;
+
+	s = cache_lookup(gfx_image_cache(), src);
+	if (!s)
+		return 0;
+	
+	img2 = gfx_alpha_img(s, alpha);
+	if (!img2)
+		return 0;
+
+	if (!desc || sprite_lookup(desc)) {
+		key = sname;
+		sprite_name(src, sname, sizeof(sname));
+	} else
+		key = desc;
+
+	sp = sprite_new(key, img2);
+	if (!sp)
+		goto err;
+	lua_pushstring(L, sname);
+	return 1;
+err:
+	gfx_free_image(img2);
+	return 0;
+}
+
+static int luaB_dup_sprite(lua_State *L) {
+	_spr_t *sp;
+	img_t s;
+	img_t img2 = NULL;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+	const char *src = luaL_optstring(L, 1, NULL);
+	const char *desc = luaL_optstring(L, 2, NULL);
+
+	if (!src)
+		return 0;
+
+	s = cache_lookup(gfx_image_cache(), src);
+	if (!s)
+		return 0;
+
+	img2 = gfx_alpha_img(s, 255);
+
+	if (!img2)
+		return 0;
+
+	if (!desc || sprite_lookup(desc)) {
+		key = sname;
+		sprite_name(src, sname, sizeof(sname));
+	} else
+		key = desc;
+
+	sp = sprite_new(key, img2);
+	if (!sp)
+		goto err;
+	lua_pushstring(L, sname);
+	return 1;
+err:
+	gfx_free_image(img2);
+	return 0;
+}
+
+static int luaB_scale_sprite(lua_State *L) {
+	_spr_t *sp;
+	img_t s;
+	img_t img2 = NULL;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+
+	const char *src = luaL_optstring(L, 1, NULL);
+	float xs = luaL_optnumber(L, 2, 0);
+	float ys = luaL_optnumber(L, 3, 0);
+	const char *desc = luaL_optstring(L, 4, NULL);
+
+	if (!src)
+		return 0;
+
+	s = cache_lookup(gfx_image_cache(), src);
+	if (!s)
+		return 0;
+
+	if (xs == 0)
+		xs = 1.0f;
+
+	if (ys == 0)
+		ys = xs;
+
+	img2 = gfx_scale(s, xs, ys);
+
+	if (!img2)
+		return 0;
+
+	if (!desc || sprite_lookup(desc)) {
+		key = sname;
+		sprite_name(src, sname, sizeof(sname));
+	} else
+		key = desc;
+
+	sp = sprite_new(key, img2);
+	if (!sp)
+		goto err;
+	lua_pushstring(L, sname);
+	return 1;
+err:
+	gfx_free_image(img2);
+	return 0;
+}
+
+
+static int luaB_rotate_sprite(lua_State *L) {
+	_spr_t *sp;
+	img_t s;
+	img_t img2 = NULL;
+	const char *key;
+	char sname[sizeof(unsigned long) * 2 + 16];
+
+	const char *src = luaL_optstring(L, 1, NULL);
+	float angle = luaL_optnumber(L, 2, 1.0f);
+	const char *desc = luaL_optstring(L, 3, NULL);
+
+	if (!src)
+		return 0;
+
+	s = cache_lookup(gfx_image_cache(), src);
+	if (!s)
+		return 0;
+	
+	img2 = gfx_rotate(s, angle);
+
+	if (!img2)
+		return 0;
+
+	if (!desc || sprite_lookup(desc)) {
+		key = sname;
+		sprite_name(src, sname, sizeof(sname));
+	} else
+		key = desc;
+
+	sp = sprite_new(key, img2);
+	if (!sp)
+		goto err;
+	lua_pushstring(L, sname);
+	return 1;
+err:
+	gfx_free_image(img2);
+	return 0;
+}
+
+static int luaB_fill_sprite(lua_State *L) {
+	img_t d;
+	float v;
+	const char *dst = luaL_optstring(L, 1, NULL);
+	int x = luaL_optnumber(L, 2, 0);
+	int y = luaL_optnumber(L, 3, 0);
+	int w = luaL_optnumber(L, 4, -1);
+	int h = luaL_optnumber(L, 5, -1);
+	const char *color = luaL_optstring(L, 6, NULL);
+	int xoff = 0, yoff = 0;
+	color_t  col = { .r = game_theme.bgcol.r, .g = game_theme.bgcol.g, .b = game_theme.bgcol.b };
+	if (!dst)
+		return 0;
+
+	d = grab_sprite(dst, &xoff, &yoff);
+
+	if (color)
+		gfx_parse_color(color, &col);
+
+	if (!d)
+		return 0;
+
+	v = game_theme.scale;
+
+	if (v != 1.0f) {
+		x *= v;
+		y *= v;
+		if (w != -1)
+			w = ceil(w * v);
+		if (h != -1)
+			h = ceil(h * v);
+	}
+	if (w == -1)
+		w = gfx_img_w(d) - 2 * xoff;
+	if (h == -1)
+		h = gfx_img_h(d) - 2 * yoff;
+	game_pict_modify(d);
+	gfx_clip(game_theme.xoff, game_theme.yoff, game_theme.w - 2*game_theme.xoff, game_theme.h - 2*game_theme.yoff);
+	gfx_img_fill(d, x + xoff, y + yoff, w, h, col);
+	gfx_noclip();
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int luaB_pixel_sprite(lua_State *L) {
+	img_t d;
+	float v;
+	int rc, w, h;
+	color_t  col = { .r = game_theme.bgcol.r, .g = game_theme.bgcol.g, .b = game_theme.bgcol.b, .a = 255 };
+	const char *dst = luaL_optstring(L, 1, NULL);
+	int x = luaL_optnumber(L, 2, 0);
+	int y = luaL_optnumber(L, 3, 0);
+	const char *color = luaL_optstring(L, 4, NULL);
+	int alpha = luaL_optnumber(L, 5, 255);
+	int xoff = 0, yoff = 0;
+
+	if (!dst)
+		return 0;
+
+	d = grab_sprite(dst, &xoff, &yoff);
+
+	if (color)
+		gfx_parse_color(color, &col);
+
+	if (!d)
+		return 0;
+
+	w = gfx_img_w(d) - 2 * xoff;
+	h = gfx_img_h(d) - 2 * yoff;
+
+	v = game_theme.scale;
+
+	if (v != 1.0f) {
+		x *= v;
+		y *= v;
+	}
+
+	if (color) {
+		if (x < 0 || y < 0 || x >= w || y >= h)
+			return 0;
+		game_pict_modify(d);
+		col.a = alpha;
+		rc = gfx_set_pixel(d, x + xoff, y + yoff, col);
+	} else {
+		rc = gfx_get_pixel(d, x + xoff, y + yoff, &col);
+	}
+
+	if (rc)
+		return 0;
+
+	lua_pushnumber(L, col.r);
+	lua_pushnumber(L, col.g);
+	lua_pushnumber(L, col.b);
+	lua_pushnumber(L, col.a);
+	return 4;
+}
+
+static int _free_sprite(const char *key)
+{
+	_spr_t *sp;
+	if (!key)
+		return -1;
+	sp = sprite_lookup(key);
+
+	if (!sp)
+		return -1;
+
+	cache_forget(gfx_image_cache(), sp->img);
+	cache_shrink(gfx_image_cache());
+
+	list_del(&sp->list);
+	free(sp->name); free(sp);
+	return 0;
+}
+
+static int luaB_free_sprite(lua_State *L) {
+	const char *key = luaL_optstring(L, 1, NULL);
+	if (_free_sprite(key))
+		return 0;
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int luaB_show_menu(lua_State *L) {
+	menu_toggle();
+	return 0;
+}
+
+static int luaB_free_font(lua_State *L) {
+	const char *key = luaL_optstring(L, 1, NULL);
+	_fnt_t *fn;
+	if (!key)
+		return 0;
+
+	fn = font_lookup(key);
+	if (!fn)
+		return 0;
+
+	list_del(&fn->list);
+	free(fn->name); free(fn);
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int luaB_load_sound(lua_State *L) {
+	int rc;
+	const char *fname = luaL_optstring(L, 1, NULL);
+	if (!fname)
+		return 0;
+	rc = sound_load(fname);
+	if (rc)
+		return 0;
+	lua_pushstring(L, fname);
+	return 1;
+}
+
+
+static int luaB_free_sound(lua_State *L) {
+	const char *fname = luaL_optstring(L, 1, NULL);
+	if (!fname)
+		return 0;
+	sound_unload(fname);
+	return 0;
+}
+
+static int luaB_free_sounds(lua_State *L) {
+	sounds_free();
+	return 0;
+}
+
+static int luaB_panning_sound(lua_State *L) {
+	int chan = luaL_optnumber(L, 1, -1);
+	int left = luaL_optnumber(L, 2, 255);
+	int right = luaL_optnumber(L, 3, 255);
+	snd_panning(chan, left, right);
+	return 0;
+}
+
+static int luaB_volume_sound(lua_State *L) {
+	int vol = luaL_optnumber(L, 1, -1);
+	vol = snd_volume_mus(vol);
+	lua_pushnumber(L, vol);
+	return 1;
+}
+
+static int luaB_channel_sound(lua_State *L) {
+	const char *s;
+	int ch = luaL_optnumber(L, 1, 0);
+	ch = ch % SND_CHANNELS;
+	s = sound_channel(ch);
+	if (s) {
+		lua_pushstring(L, s);
+		return 1;
+	}
+	return 0;
+}
+
+static int luaB_mouse_pos(lua_State *L) {
+	int x = luaL_optnumber(L, 1, -1);
+	int y = luaL_optnumber(L, 2, -1);
+	float v = game_theme.scale;
+	if (x != -1 && y != -1) {
+		x *= v;
+		y *= v;
+		gfx_warp_cursor(x + game_theme.xoff, y + game_theme.yoff);
+		x = -1;
+		y = -1;
+	}
+	gfx_cursor(&x, &y);
+	x = (x - game_theme.xoff) / v;
+	y = (y - game_theme.yoff) / v;
+	lua_pushnumber(L, x);
+	lua_pushnumber(L, y);
+	return 2;
+}
+
+static int luaB_get_ticks(lua_State *L) {
+	lua_pushnumber(L, gfx_ticks());
+	return 1;
+}
+
+static int luaB_bit_and(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a & b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_or(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a | b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_xor(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a ^ b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_shl(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a << b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_shr(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a >> b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_not(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int r = ~a;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_div(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 1);
+	unsigned int r;
+	if (b) {
+		r = a / b;
+		lua_pushnumber(L, r);
+		return 1;
+	}
+	return 0;
+}
+
+static int luaB_bit_idiv(lua_State *L) {
+	int a = luaL_optnumber(L, 1, 0);
+	int b = luaL_optnumber(L, 2, 1);
+	int r;
+	if (b) {
+		r = a / b;
+		lua_pushnumber(L, r);
+		return 1;
+	}
+	return 0;
+}
+
+static int luaB_bit_mod(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 1);
+	unsigned int r;
+	if (b) {
+		r = a % b;
+		lua_pushnumber(L, r);
+		return 1;
+	}
+	return 0;
+}
+
+static int luaB_bit_mul(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a * b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_imul(lua_State *L) {
+	int a = luaL_optnumber(L, 1, 0);
+	int b = luaL_optnumber(L, 2, 0);
+	int r = a * b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_sub(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a - b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_add(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	unsigned int b = luaL_optnumber(L, 2, 0);
+	unsigned int r = a + b;
+	lua_pushnumber(L, r);
+	return 1;
+}
+
+static int luaB_bit_unsigned(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	lua_pushnumber(L, a);
+	return 1;
+}
+
+static int luaB_bit_signed(lua_State *L) {
+	unsigned int a = luaL_optnumber(L, 1, 0);
+	lua_pushnumber(L, (int)a);
+	return 1;
+}
+
 static const luaL_Reg base_funcs[] = {
 	{"doencfile", luaB_doencfile},
 	{"dofile", luaB_dofile},
@@ -542,6 +1550,51 @@ static const luaL_Reg base_funcs[] = {
 	{"set_timer", luaB_set_timer},
 	{"theme_var", luaB_theme_var},
 	{"readdir", dir_iter_factory},
+	{"menu_toggle", luaB_show_menu},
+
+	{"sound_load", luaB_load_sound},
+	{"sound_free", luaB_free_sound},
+	{"sound_channel", luaB_channel_sound},
+	{"sound_panning", luaB_panning_sound},
+	{"sound_volume", luaB_volume_sound},
+	{"sounds_free", luaB_free_sounds},
+	
+	{"mouse_pos", luaB_mouse_pos},
+
+	{"font_load", luaB_load_font},
+	{"font_free", luaB_free_font},
+	{"font_scaled_size", luaB_font_size_scaled},
+	{"get_ticks", luaB_get_ticks},
+	{"sprite_load", luaB_load_sprite},
+	{"sprite_text", luaB_text_sprite},
+	{"sprite_free", luaB_free_sprite},
+	{"sprites_free", luaB_free_sprites},
+	{"sprite_draw", luaB_draw_sprite},
+	{"sprite_copy", luaB_copy_sprite},
+	{"sprite_fill", luaB_fill_sprite},
+	{"sprite_dup", luaB_dup_sprite},
+	{"sprite_alpha", luaB_alpha_sprite},
+	{"sprite_size", luaB_sprite_size},
+	{"sprite_scale", luaB_scale_sprite},
+	{"sprite_rotate", luaB_rotate_sprite},
+	{"sprite_text_size", luaB_text_size},
+	{"sprite_pixel", luaB_pixel_sprite},
+	
+	{"bit_or", luaB_bit_or},
+	{"bit_and", luaB_bit_and},
+	{"bit_xor", luaB_bit_xor},
+	{"bit_shl", luaB_bit_shl},
+	{"bit_shr", luaB_bit_shr},
+	{"bit_not", luaB_bit_not},
+	{"bit_div", luaB_bit_div},
+	{"bit_idiv", luaB_bit_idiv},
+	{"bit_mod", luaB_bit_mod},
+	{"bit_mul", luaB_bit_mul},
+	{"bit_imul", luaB_bit_imul},
+	{"bit_sub", luaB_bit_sub},
+	{"bit_add", luaB_bit_add},
+	{"bit_signed", luaB_bit_signed},
+	{"bit_unsigned", luaB_bit_unsigned},	
 	{NULL, NULL}
 };
 
@@ -612,6 +1665,7 @@ int instead_init(void)
 	}
 	/* cleanup Lua */
 	instead_clear();
+	srand(time(NULL));
 	return 0;
 }
 
@@ -629,6 +1683,7 @@ void instead_done(void)
 #ifdef _HAVE_ICONV
 	fromcp = NULL;
 #endif
+	sprites_free();
 }
 
 int  instead_encode(const char *s, const char *d)
@@ -665,4 +1720,3 @@ int  instead_encode(const char *s, const char *d)
 	fclose(dst);
 	return 0;
 }
-

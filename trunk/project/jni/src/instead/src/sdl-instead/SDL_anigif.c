@@ -21,8 +21,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "SDL_anigif.h"
+#include "sdl_idf.h"
 
-
+extern idf_t game_idf;
 
 /* Code from here to end of file has been adapted from XPaint:           */
 /* +-------------------------------------------------------------------+ */
@@ -137,7 +138,7 @@ int AG_LoadGIF( const char* file, AG_Frame* frames, int size, int *loop )
 {
 	int n = 0;
 
-	SDL_RWops* src = SDL_RWFromFile( file, "rb" );
+	SDL_RWops* src = RWFromIdf(game_idf, file);
 
 	if ( src )
 	{

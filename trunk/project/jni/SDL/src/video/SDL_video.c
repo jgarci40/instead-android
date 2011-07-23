@@ -1,22 +1,23 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
 
@@ -27,20 +28,15 @@
 #include "SDL_sysvideo.h"
 #include "SDL_blit.h"
 #include "SDL_pixels_c.h"
-#include "SDL_rect_c.h"
 #include "../events/SDL_events_c.h"
-
-#if SDL_VIDEO_OPENGL
-#include "SDL_opengl.h"
-#endif /* SDL_VIDEO_OPENGL */
 
 #if SDL_VIDEO_OPENGL_ES
 #include "SDL_opengles.h"
 #endif /* SDL_VIDEO_OPENGL_ES */
 
-#if SDL_VIDEO_OPENGL_ES2
-#include "SDL_opengles2.h"
-#endif /* SDL_VIDEO_OPENGL_ES2 */
+#if SDL_VIDEO_OPENGL
+#include "SDL_opengl.h"
+#endif /* SDL_VIDEO_OPENGL */
 
 #include "SDL_syswm.h"
 
@@ -96,16 +92,8 @@ static SDL_VideoDevice *_this = NULL;
         return retval; \
     }
 
-#define CHECK_DISPLAY_INDEX(displayIndex, retval) \
-    if (!_this) { \
-        SDL_UninitializedVideo(); \
-        return retval; \
-    } \
-    if (displayIndex < 0 || displayIndex >= _this->num_displays) { \
-        SDL_SetError("displayIndex must be in the range 0 - %d", \
-                     _this->num_displays - 1); \
-        return retval; \
-    }
+/* Various local functions */
+static void SDL_UpdateWindowGrab(SDL_Window * window);
 
 /* Support for framebuffer emulation using an accelerated renderer */
 
@@ -116,141 +104,32 @@ typedef struct {
     SDL_Texture *texture;
     void *pixels;
     int pitch;
-    int bytes_per_pixel;
 } SDL_WindowTextureData;
-
-static SDL_bool
-ShouldUseTextureFramebuffer()
-{
-    const char *hint;
-
-    /* If there's no native framebuffer support then there's no option */
-    if (!_this->CreateWindowFramebuffer) {
-        return SDL_TRUE;
-    }
-
-    /* If the user has specified a software renderer we can't use a
-       texture framebuffer, or renderer creation will go recursive.
-     */
-    hint = SDL_GetHint(SDL_HINT_RENDER_DRIVER);
-    if (hint && SDL_strcasecmp(hint, "software") == 0) {
-        return SDL_FALSE;
-    }
-
-    /* See if the user or application wants a specific behavior */
-    hint = SDL_GetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION);
-    if (hint) {
-        if (*hint == '0') {
-            return SDL_FALSE;
-        } else {
-            return SDL_TRUE;
-        }
-    }
-
-    /* Each platform has different performance characteristics */
-#if defined(__WIN32__)
-    /* GDI BitBlt() is way faster than Direct3D dynamic textures right now.
-     */
-    return SDL_FALSE;
-
-#elif defined(__MACOSX__)
-    /* Mac OS X uses OpenGL as the native fast path */
-    return SDL_TRUE;
-
-#elif defined(__LINUX__)
-    /* Properly configured OpenGL drivers are faster than MIT-SHM */
-#if SDL_VIDEO_OPENGL
-    /* Ugh, find a way to cache this value! */
-    {
-        SDL_Window *window;
-        SDL_GLContext context;
-        SDL_bool hasAcceleratedOpenGL = SDL_FALSE;
-
-        window = SDL_CreateWindow("OpenGL test", -32, -32, 32, 32, SDL_WINDOW_OPENGL|SDL_WINDOW_HIDDEN);
-        if (window) {
-            context = SDL_GL_CreateContext(window);
-            if (context) {
-                const GLubyte *(APIENTRY * glGetStringFunc) (GLenum);
-                const char *vendor = NULL;
-
-                glGetStringFunc = SDL_GL_GetProcAddress("glGetString");
-                if (glGetStringFunc) {
-                    vendor = (const char *) glGetStringFunc(GL_VENDOR);
-                }
-                /* Add more vendors here at will... */
-                if (vendor &&
-                    (SDL_strstr(vendor, "ATI Technologies") ||
-                     SDL_strstr(vendor, "NVIDIA"))) {
-                    hasAcceleratedOpenGL = SDL_TRUE;
-                }
-                SDL_GL_DeleteContext(context);
-            }
-            SDL_DestroyWindow(window);
-        }
-        return hasAcceleratedOpenGL;
-    }
-#else
-    return SDL_FALSE;
-#endif
-
-#else
-    /* Play it safe, assume that if there is a framebuffer driver that it's
-       optimized for the current platform.
-    */
-    return SDL_FALSE;
-#endif
-}
 
 static int
 SDL_CreateWindowTexture(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch)
 {
     SDL_WindowTextureData *data;
+    SDL_Renderer *renderer;
     SDL_RendererInfo info;
     Uint32 i;
 
     data = SDL_GetWindowData(window, SDL_WINDOWTEXTUREDATA);
     if (!data) {
-        SDL_Renderer *renderer = NULL;
-        SDL_RendererInfo info;
-        int i;
-        const char *hint = SDL_GetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION);
-
-        /* Check to see if there's a specific driver requested */
-        if (hint && *hint != '0' && *hint != '1' &&
-            SDL_strcasecmp(hint, "software") != 0) {
-            for (i = 0; i < SDL_GetNumRenderDrivers(); ++i) {
-                SDL_GetRenderDriverInfo(i, &info);
-                if (SDL_strcasecmp(info.name, hint) == 0) {
-                    renderer = SDL_CreateRenderer(window, i, 0);
-                    break;
-                }
-            }
-        }
-
-        if (!renderer) {
-            for (i = 0; i < SDL_GetNumRenderDrivers(); ++i) {
-                SDL_GetRenderDriverInfo(i, &info);
-                if (SDL_strcmp(info.name, "software") != 0) {
-                    renderer = SDL_CreateRenderer(window, i, 0);
-                    if (renderer) {
-                        break;
-                    }
-                }
-            }
-        }
-        if (!renderer) {
-            return -1;
-        }
-
-        /* Create the data after we successfully create the renderer (bug #1116) */
         data = (SDL_WindowTextureData *)SDL_calloc(1, sizeof(*data));
         if (!data) {
-            SDL_DestroyRenderer(renderer);
             SDL_OutOfMemory();
             return -1;
         }
         SDL_SetWindowData(window, SDL_WINDOWTEXTUREDATA, data);
+    }
 
+    renderer = data->renderer;
+    if (!renderer) {
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+        if (!renderer) {
+            return -1;
+        }
         data->renderer = renderer;
     }
 
@@ -264,21 +143,20 @@ SDL_CreateWindowTexture(_THIS, SDL_Window * window, Uint32 * format, void ** pix
         data->pixels = NULL;
     }
 
-    if (SDL_GetRendererInfo(data->renderer, &info) < 0) {
+    if (SDL_GetRendererInfo(renderer, &info) < 0) {
         return -1;
     }
 
     /* Find the first format without an alpha channel */
     *format = info.texture_formats[0];
     for (i = 0; i < info.num_texture_formats; ++i) {
-        if (!SDL_ISPIXELFORMAT_FOURCC(info.texture_formats[i]) &&
-            !SDL_ISPIXELFORMAT_ALPHA(info.texture_formats[i])) {
+        if (!SDL_ISPIXELFORMAT_ALPHA(info.texture_formats[i])) {
             *format = info.texture_formats[i];
             break;
         }
     }
 
-    data->texture = SDL_CreateTexture(data->renderer, *format,
+    data->texture = SDL_CreateTexture(renderer, *format,
                                       SDL_TEXTUREACCESS_STREAMING,
                                       window->w, window->h);
     if (!data->texture) {
@@ -286,8 +164,7 @@ SDL_CreateWindowTexture(_THIS, SDL_Window * window, Uint32 * format, void ** pix
     }
 
     /* Create framebuffer data */
-    data->bytes_per_pixel = SDL_BYTESPERPIXEL(*format);
-    data->pitch = (((window->w * data->bytes_per_pixel) + 3) & ~3);
+    data->pitch = (((window->w * SDL_BYTESPERPIXEL(*format)) + 3) & ~3);
     data->pixels = SDL_malloc(window->h * data->pitch);
     if (!data->pixels) {
         SDL_OutOfMemory();
@@ -296,19 +173,13 @@ SDL_CreateWindowTexture(_THIS, SDL_Window * window, Uint32 * format, void ** pix
 
     *pixels = data->pixels;
     *pitch = data->pitch;
-
-    /* Make sure we're not double-scaling the viewport */
-    SDL_RenderSetViewport(data->renderer, NULL);
-
     return 0;
 }
 
 static int
-SDL_UpdateWindowTexture(_THIS, SDL_Window * window, SDL_Rect * rects, int numrects)
+SDL_UpdateWindowTexture(_THIS, SDL_Window * window, int numrects, SDL_Rect * rects)
 {
     SDL_WindowTextureData *data;
-    SDL_Rect rect;
-    void *src;
 
     data = SDL_GetWindowData(window, SDL_WINDOWTEXTUREDATA);
     if (!data || !data->texture) {
@@ -316,21 +187,13 @@ SDL_UpdateWindowTexture(_THIS, SDL_Window * window, SDL_Rect * rects, int numrec
         return -1;
     }
 
-    /* Update a single rect that contains subrects for best DMA performance */
-    if (SDL_GetSpanEnclosingRect(window->w, window->h, numrects, rects, &rect)) {
-        src = (void *)((Uint8 *)data->pixels +
-                        rect.y * data->pitch +
-                        rect.x * data->bytes_per_pixel);
-        if (SDL_UpdateTexture(data->texture, &rect, src, data->pitch) < 0) {
-            return -1;
-        }
-
-        if (SDL_RenderCopy(data->renderer, data->texture, NULL, NULL) < 0) {
-            return -1;
-        }
-
-        SDL_RenderPresent(data->renderer);
+    if (SDL_UpdateTexture(data->texture, NULL, data->pixels, data->pitch) < 0) {
+        return -1;
     }
+    if (SDL_RenderCopy(data->renderer, data->texture, NULL, NULL) < 0) {
+        return -1;
+    }
+    SDL_RenderPresent(data->renderer);
     return 0;
 }
 
@@ -481,16 +344,8 @@ SDL_VideoInit(const char *driver_name)
     _this->gl_config.multisamplesamples = 0;
     _this->gl_config.retained_backing = 1;
     _this->gl_config.accelerated = -1;  /* accelerated or not, both are fine */
-#if SDL_VIDEO_OPENGL
     _this->gl_config.major_version = 2;
     _this->gl_config.minor_version = 1;
-#elif SDL_VIDEO_OPENGL_ES
-    _this->gl_config.major_version = 1;
-    _this->gl_config.minor_version = 1;
-#elif SDL_VIDEO_OPENGL_ES2
-    _this->gl_config.major_version = 2;
-    _this->gl_config.minor_version = 0;
-#endif
 
     /* Initialize the video subsystem */
     if (_this->VideoInit(_this) < 0) {
@@ -505,8 +360,8 @@ SDL_VideoInit(const char *driver_name)
         return (-1);
     }
 
-    /* Add the renderer framebuffer emulation if desired */
-    if (ShouldUseTextureFramebuffer()) {
+    /* Add the renderer framebuffer emulation if needed */
+    if (!_this->CreateWindowFramebuffer) {
         _this->CreateWindowFramebuffer = SDL_CreateWindowTexture;
         _this->UpdateWindowFramebuffer = SDL_UpdateWindowTexture;
         _this->DestroyWindowFramebuffer = SDL_DestroyWindowTexture;
@@ -577,46 +432,64 @@ SDL_GetNumVideoDisplays(void)
 }
 
 int
-SDL_GetIndexOfDisplay(SDL_VideoDisplay *display)
+SDL_GetDisplayBounds(int index, SDL_Rect * rect)
 {
-    int displayIndex;
+    if (!_this) {
+        SDL_UninitializedVideo();
+        return -1;
+    }
+    if (index < 0 || index >= _this->num_displays) {
+        SDL_SetError("index must be in the range 0 - %d",
+                     _this->num_displays - 1);
+        return -1;
+    }
+    if (rect) {
+        SDL_VideoDisplay *display = &_this->displays[index];
 
-    for (displayIndex = 0; displayIndex < _this->num_displays; ++displayIndex) {
-        if (display == &_this->displays[displayIndex]) {
-            return displayIndex;
+        if (_this->GetDisplayBounds) {
+            if (_this->GetDisplayBounds(_this, display, rect) < 0) {
+                return -1;
+            }
+        } else {
+            /* Assume that the displays are left to right */
+            if (index == 0) {
+                rect->x = 0;
+                rect->y = 0;
+            } else {
+                SDL_GetDisplayBounds(index-1, rect);
+                rect->x += rect->w;
+            }
+            rect->w = display->desktop_mode.w;
+            rect->h = display->desktop_mode.h;
         }
     }
-
-    /* Couldn't find the display, just use index 0 */
     return 0;
 }
 
 int
-SDL_GetDisplayBounds(int displayIndex, SDL_Rect * rect)
+SDL_SelectVideoDisplay(int index)
 {
-    CHECK_DISPLAY_INDEX(displayIndex, -1);
-
-    if (rect) {
-        SDL_VideoDisplay *display = &_this->displays[displayIndex];
-
-        if (_this->GetDisplayBounds) {
-            if (_this->GetDisplayBounds(_this, display, rect) == 0) {
-                return 0;
-            }
-        }
-
-        /* Assume that the displays are left to right */
-        if (displayIndex == 0) {
-            rect->x = 0;
-            rect->y = 0;
-        } else {
-            SDL_GetDisplayBounds(displayIndex-1, rect);
-            rect->x += rect->w;
-        }
-        rect->w = display->desktop_mode.w;
-        rect->h = display->desktop_mode.h;
+    if (!_this) {
+        SDL_UninitializedVideo();
+        return (-1);
     }
+    if (index < 0 || index >= _this->num_displays) {
+        SDL_SetError("index must be in the range 0 - %d",
+                     _this->num_displays - 1);
+        return -1;
+    }
+    _this->current_display = index;
     return 0;
+}
+
+int
+SDL_GetCurrentVideoDisplay(void)
+{
+    if (!_this) {
+        SDL_UninitializedVideo();
+        return (-1);
+    }
+    return _this->current_display;
 }
 
 SDL_bool
@@ -655,13 +528,7 @@ SDL_AddDisplayMode(SDL_VideoDisplay * display,  const SDL_DisplayMode * mode)
     return SDL_TRUE;
 }
 
-SDL_VideoDisplay *
-SDL_GetFirstDisplay(void)
-{
-    return &_this->displays[0];
-}
-
-static int
+int
 SDL_GetNumDisplayModesForDisplay(SDL_VideoDisplay * display)
 {
     if (!display->num_display_modes && _this->GetDisplayModes) {
@@ -673,21 +540,17 @@ SDL_GetNumDisplayModesForDisplay(SDL_VideoDisplay * display)
 }
 
 int
-SDL_GetNumDisplayModes(int displayIndex)
+SDL_GetNumDisplayModes()
 {
-    CHECK_DISPLAY_INDEX(displayIndex, -1);
-
-    return SDL_GetNumDisplayModesForDisplay(&_this->displays[displayIndex]);
+    if (_this) {
+        return SDL_GetNumDisplayModesForDisplay(SDL_CurrentDisplay);
+    }
+    return 0;
 }
 
 int
-SDL_GetDisplayMode(int displayIndex, int index, SDL_DisplayMode * mode)
+SDL_GetDisplayModeForDisplay(SDL_VideoDisplay * display, int index, SDL_DisplayMode * mode)
 {
-    SDL_VideoDisplay *display;
-
-    CHECK_DISPLAY_INDEX(displayIndex, -1);
-
-    display = &_this->displays[displayIndex];
     if (index < 0 || index >= SDL_GetNumDisplayModesForDisplay(display)) {
         SDL_SetError("index must be in the range of 0 - %d",
                      SDL_GetNumDisplayModesForDisplay(display) - 1);
@@ -700,13 +563,14 @@ SDL_GetDisplayMode(int displayIndex, int index, SDL_DisplayMode * mode)
 }
 
 int
-SDL_GetDesktopDisplayMode(int displayIndex, SDL_DisplayMode * mode)
+SDL_GetDisplayMode(int index, SDL_DisplayMode * mode)
 {
-    SDL_VideoDisplay *display;
+    return SDL_GetDisplayModeForDisplay(SDL_CurrentDisplay, index, mode);
+}
 
-    CHECK_DISPLAY_INDEX(displayIndex, -1);
-
-    display = &_this->displays[displayIndex];
+int
+SDL_GetDesktopDisplayModeForDisplay(SDL_VideoDisplay * display, SDL_DisplayMode * mode)
+{
     if (mode) {
         *mode = display->desktop_mode;
     }
@@ -714,20 +578,35 @@ SDL_GetDesktopDisplayMode(int displayIndex, SDL_DisplayMode * mode)
 }
 
 int
-SDL_GetCurrentDisplayMode(int displayIndex, SDL_DisplayMode * mode)
+SDL_GetDesktopDisplayMode(SDL_DisplayMode * mode)
 {
-    SDL_VideoDisplay *display;
+    if (!_this) {
+        SDL_UninitializedVideo();
+        return -1;
+    }
+    return SDL_GetDesktopDisplayModeForDisplay(SDL_CurrentDisplay, mode);
+}
 
-    CHECK_DISPLAY_INDEX(displayIndex, -1);
-
-    display = &_this->displays[displayIndex];
+int
+SDL_GetCurrentDisplayModeForDisplay(SDL_VideoDisplay * display, SDL_DisplayMode * mode)
+{
     if (mode) {
         *mode = display->current_mode;
     }
     return 0;
 }
 
-static SDL_DisplayMode *
+int
+SDL_GetCurrentDisplayMode(SDL_DisplayMode * mode)
+{
+    if (!_this) {
+        SDL_UninitializedVideo();
+        return -1;
+    }
+    return SDL_GetCurrentDisplayModeForDisplay(SDL_CurrentDisplay, mode);
+}
+
+SDL_DisplayMode *
 SDL_GetClosestDisplayModeForDisplay(SDL_VideoDisplay * display,
                                     const SDL_DisplayMode * mode,
                                     SDL_DisplayMode * closest)
@@ -835,16 +714,14 @@ SDL_GetClosestDisplayModeForDisplay(SDL_VideoDisplay * display,
 }
 
 SDL_DisplayMode *
-SDL_GetClosestDisplayMode(int displayIndex,
-                          const SDL_DisplayMode * mode,
+SDL_GetClosestDisplayMode(const SDL_DisplayMode * mode,
                           SDL_DisplayMode * closest)
 {
-    SDL_VideoDisplay *display;
-
-    CHECK_DISPLAY_INDEX(displayIndex, NULL);
-
-    display = &_this->displays[displayIndex];
-    return SDL_GetClosestDisplayModeForDisplay(display, mode, closest);
+    if (!_this) {
+        SDL_UninitializedVideo();
+        return NULL;
+    }
+    return SDL_GetClosestDisplayModeForDisplay(SDL_CurrentDisplay, mode, closest);
 }
 
 int
@@ -881,7 +758,7 @@ SDL_SetDisplayModeForDisplay(SDL_VideoDisplay * display, const SDL_DisplayMode *
     }
 
     /* See if there's anything left to do */
-    current_mode = display->current_mode;
+    SDL_GetCurrentDisplayModeForDisplay(display, &current_mode);
     if (SDL_memcmp(&display_mode, &current_mode, sizeof(display_mode)) == 0) {
         return 0;
     }
@@ -896,72 +773,6 @@ SDL_SetDisplayModeForDisplay(SDL_VideoDisplay * display, const SDL_DisplayMode *
     }
     display->current_mode = display_mode;
     return 0;
-}
-
-int
-SDL_GetWindowDisplay(SDL_Window * window)
-{
-    int displayIndex;
-    int i, dist;
-    int closest = -1;
-    int closest_dist = 0x7FFFFFFF;
-    SDL_Point center;
-    SDL_Point delta;
-    SDL_Rect rect;
-
-    CHECK_WINDOW_MAGIC(window, -1);
-
-    if (SDL_WINDOWPOS_ISUNDEFINED(window->x) ||
-        SDL_WINDOWPOS_ISCENTERED(window->x)) {
-        displayIndex = (window->x & 0xFFFF);
-        if (displayIndex >= _this->num_displays) {
-            displayIndex = 0;
-        }
-        return displayIndex;
-    }
-    if (SDL_WINDOWPOS_ISUNDEFINED(window->y) ||
-        SDL_WINDOWPOS_ISCENTERED(window->y)) {
-        displayIndex = (window->y & 0xFFFF);
-        if (displayIndex >= _this->num_displays) {
-            displayIndex = 0;
-        }
-        return displayIndex;
-    }
-
-    /* Find the display containing the window */
-    center.x = window->x + window->w / 2;
-    center.y = window->y + window->h / 2;
-    for (i = 0; i < _this->num_displays; ++i) {
-        SDL_VideoDisplay *display = &_this->displays[i];
-
-        SDL_GetDisplayBounds(i, &rect);
-        if (display->fullscreen_window == window || SDL_EnclosePoints(&center, 1, &rect, NULL)) {
-            return i;
-        }
-
-        delta.x = center.x - (rect.x + rect.w / 2);
-        delta.y = center.y - (rect.y + rect.h / 2);
-        dist = (delta.x*delta.x + delta.y*delta.y);
-        if (dist < closest_dist) {
-            closest = i;
-            closest_dist = dist;
-        }
-    }
-    if (closest < 0) {
-        SDL_SetError("Couldn't find any displays");
-    }
-    return closest;
-}
-
-SDL_VideoDisplay *
-SDL_GetDisplayForWindow(SDL_Window *window)
-{
-    int displayIndex = SDL_GetWindowDisplay(window);
-    if (displayIndex >= 0) {
-        return &_this->displays[displayIndex];
-    } else {
-        return NULL;
-    }
 }
 
 int
@@ -992,7 +803,7 @@ SDL_GetWindowDisplayMode(SDL_Window * window, SDL_DisplayMode * mode)
         fullscreen_mode.h = window->h;
     }
 
-    if (!SDL_GetClosestDisplayModeForDisplay(SDL_GetDisplayForWindow(window),
+    if (!SDL_GetClosestDisplayModeForDisplay(window->display,
                                              &fullscreen_mode,
                                              &fullscreen_mode)) {
         SDL_SetError("Couldn't find display mode match");
@@ -1008,80 +819,58 @@ SDL_GetWindowDisplayMode(SDL_Window * window, SDL_DisplayMode * mode)
 Uint32
 SDL_GetWindowPixelFormat(SDL_Window * window)
 {
-    SDL_VideoDisplay *display;
-
-    CHECK_WINDOW_MAGIC(window, SDL_PIXELFORMAT_UNKNOWN);
-
-    display = SDL_GetDisplayForWindow(window);
-    return display->current_mode.format;
+    SDL_VideoDisplay *display = window->display;
+    SDL_DisplayMode *displayMode = &display->current_mode;
+    return displayMode->format;
 }
 
 static void
-SDL_RestoreMousePosition(SDL_Window *window)
+SDL_UpdateFullscreenMode(SDL_Window * window, SDL_bool attempt)
 {
-    int x, y;
+    SDL_VideoDisplay *display = window->display;
 
-    if (window == SDL_GetMouseFocus()) {
-        SDL_GetMouseState(&x, &y);
-        SDL_WarpMouseInWindow(window, x, y);
-    }
-}
-
-static void
-SDL_UpdateFullscreenMode(SDL_Window * window, SDL_bool fullscreen)
-{
-    SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
-    SDL_Window *other;
-
-    if (fullscreen) {
-        /* Hide any other fullscreen windows */
-        if (display->fullscreen_window &&
-            display->fullscreen_window != window) {
-            SDL_MinimizeWindow(display->fullscreen_window);
-        }
-    }
-
-    /* See if anything needs to be done now */
-    if ((display->fullscreen_window == window) == fullscreen) {
+    /* See if we're already processing a window */
+    if (display->updating_fullscreen) {
         return;
     }
 
-    /* See if there are any fullscreen windows */
-    for (other = _this->windows; other; other = other->next) {
-        SDL_bool setDisplayMode = SDL_FALSE;
+    display->updating_fullscreen = SDL_TRUE;
 
-        if (other == window) {
-            setDisplayMode = fullscreen;
-        } else if (FULLSCREEN_VISIBLE(other) &&
-                   SDL_GetDisplayForWindow(other) == display) {
-            setDisplayMode = SDL_TRUE;
+    /* See if we even want to do anything here */
+    if ((window->flags & SDL_WINDOW_FULLSCREEN) &&
+        (window->flags & SDL_WINDOW_SHOWN)) {
+        if (attempt) {
+            /* We just gained some state, try to gain all states */
+            if (window->flags & SDL_WINDOW_MINIMIZED) {
+                SDL_RestoreWindow(window);
+            } else {
+                SDL_RaiseWindow(window);
+            }
+        } else {
+            /* We just lost some state, try to release all states */
+            SDL_MinimizeWindow(window);
         }
+    }
 
-        if (setDisplayMode) {
+    if (FULLSCREEN_VISIBLE(window)) {
+        /* Hide any other fullscreen windows */
+        SDL_Window *other;
+        for (other = display->windows; other; other = other->next) {
+            if (other != window && FULLSCREEN_VISIBLE(other)) {
+                SDL_MinimizeWindow(other);
+            }
+        }
+    }
+
+    display->updating_fullscreen = SDL_FALSE;
+
+    /* See if there are any fullscreen windows */
+    for (window = display->windows; window; window = window->next) {
+        if (FULLSCREEN_VISIBLE(window)) {
             SDL_DisplayMode fullscreen_mode;
-
-            if (SDL_GetWindowDisplayMode(other, &fullscreen_mode) == 0) {
-                SDL_bool resized = SDL_TRUE;
-
-                if (other->w == fullscreen_mode.w && other->h == fullscreen_mode.h) {
-                    resized = SDL_FALSE;
-                }
-
+            if (SDL_GetWindowDisplayMode(window, &fullscreen_mode) == 0) {
                 SDL_SetDisplayModeForDisplay(display, &fullscreen_mode);
-                if (_this->SetWindowFullscreen) {
-                    _this->SetWindowFullscreen(_this, other, display, SDL_TRUE);
-                }
-                display->fullscreen_window = other;
-
-                /* Generate a mode change event here */
-                if (resized) {
-                    SDL_SendWindowEvent(other, SDL_WINDOWEVENT_RESIZED,
-                                        fullscreen_mode.w, fullscreen_mode.h);
-                } else {
-                    SDL_OnWindowResized(other);
-                }
-
-                SDL_RestoreMousePosition(other);
+                display->fullscreen_window = window;
                 return;
             }
         }
@@ -1089,50 +878,18 @@ SDL_UpdateFullscreenMode(SDL_Window * window, SDL_bool fullscreen)
 
     /* Nope, restore the desktop mode */
     SDL_SetDisplayModeForDisplay(display, NULL);
-
-    if (_this->SetWindowFullscreen) {
-        _this->SetWindowFullscreen(_this, window, display, SDL_FALSE);
-    }
     display->fullscreen_window = NULL;
-
-    /* Generate a mode change event here */
-    SDL_OnWindowResized(window);
-
-    /* Restore the cursor position */
-    SDL_RestoreMousePosition(window);
-}
-
-#define CREATE_FLAGS \
-    (SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE)
-
-static void
-SDL_FinishWindowCreation(SDL_Window *window, Uint32 flags)
-{
-    window->windowed.x = window->x;
-    window->windowed.y = window->y;
-    window->windowed.w = window->w;
-    window->windowed.h = window->h;
-
-    if (flags & SDL_WINDOW_MAXIMIZED) {
-        SDL_MaximizeWindow(window);
-    }
-    if (flags & SDL_WINDOW_MINIMIZED) {
-        SDL_MinimizeWindow(window);
-    }
-    if (flags & SDL_WINDOW_FULLSCREEN) {
-        SDL_SetWindowFullscreen(window, SDL_TRUE);
-    }
-    if (flags & SDL_WINDOW_INPUT_GRABBED) {
-        SDL_SetWindowGrab(window, SDL_TRUE);
-    }
-    if (!(flags & SDL_WINDOW_HIDDEN)) {
-        SDL_ShowWindow(window);
-    }
 }
 
 SDL_Window *
 SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
 {
+    const Uint32 allowed_flags = (SDL_WINDOW_FULLSCREEN |
+                                  SDL_WINDOW_OPENGL |
+                                  SDL_WINDOW_BORDERLESS |
+                                  SDL_WINDOW_RESIZABLE |
+                                  SDL_WINDOW_INPUT_GRABBED);
+    SDL_VideoDisplay *display;
     SDL_Window *window;
 
     if (!_this) {
@@ -1141,11 +898,6 @@ SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
             return NULL;
         }
     }
-
-    /* Some platforms have OpenGL enabled by default */
-#if (SDL_VIDEO_OPENGL && __MACOSX__) || SDL_VIDEO_OPENGL_ES || SDL_VIDEO_OPENGL_ES2
-    flags |= SDL_WINDOW_OPENGL;
-#endif
     if (flags & SDL_WINDOW_OPENGL) {
         if (!_this->GL_CreateContext) {
             SDL_SetError("No OpenGL support in video driver");
@@ -1153,6 +905,7 @@ SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
         }
         SDL_GL_LoadLibrary(NULL);
     }
+    display = SDL_CurrentDisplay;
     window = (SDL_Window *)SDL_calloc(1, sizeof(*window));
     window->magic = &_this->window_magic;
     window->id = _this->next_object_id++;
@@ -1160,28 +913,13 @@ SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
     window->y = y;
     window->w = w;
     window->h = h;
-    if (SDL_WINDOWPOS_ISUNDEFINED(x) || SDL_WINDOWPOS_ISUNDEFINED(y) ||
-        SDL_WINDOWPOS_ISCENTERED(x) || SDL_WINDOWPOS_ISCENTERED(y)) {
-        SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
-        int displayIndex;
-        SDL_Rect bounds;
-
-        displayIndex = SDL_GetIndexOfDisplay(display);
-        SDL_GetDisplayBounds(displayIndex, &bounds);
-        if (SDL_WINDOWPOS_ISUNDEFINED(x) || SDL_WINDOWPOS_ISCENTERED(x)) {
-            window->x = bounds.x + (bounds.w - w) / 2;
-        }
-        if (SDL_WINDOWPOS_ISUNDEFINED(y) || SDL_WINDOWPOS_ISCENTERED(y)) {
-            window->y = bounds.y + (bounds.h - h) / 2;
-        }
+    window->flags = (flags & allowed_flags);
+    window->display = display;
+    window->next = display->windows;
+    if (display->windows) {
+        display->windows->prev = window;
     }
-    window->flags = ((flags & CREATE_FLAGS) | SDL_WINDOW_HIDDEN);
-    window->brightness = 1.0f;
-    window->next = _this->windows;
-    if (_this->windows) {
-        _this->windows->prev = window;
-    }
-    _this->windows = window;
+    display->windows = window;
 
     if (_this->CreateWindow && _this->CreateWindow(_this, window) < 0) {
         SDL_DestroyWindow(window);
@@ -1191,7 +929,16 @@ SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
     if (title) {
         SDL_SetWindowTitle(window, title);
     }
-    SDL_FinishWindowCreation(window, flags);
+    if (flags & SDL_WINDOW_MAXIMIZED) {
+        SDL_MaximizeWindow(window);
+    }
+    if (flags & SDL_WINDOW_MINIMIZED) {
+        SDL_MinimizeWindow(window);
+    }
+    if (flags & SDL_WINDOW_SHOWN) {
+        SDL_ShowWindow(window);
+    }
+    SDL_UpdateWindowGrab(window);
 
     return window;
 }
@@ -1199,22 +946,24 @@ SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
 SDL_Window *
 SDL_CreateWindowFrom(const void *data)
 {
+    SDL_VideoDisplay *display;
     SDL_Window *window;
 
     if (!_this) {
         SDL_UninitializedVideo();
         return NULL;
     }
+    display = SDL_CurrentDisplay;
     window = (SDL_Window *)SDL_calloc(1, sizeof(*window));
     window->magic = &_this->window_magic;
     window->id = _this->next_object_id++;
     window->flags = SDL_WINDOW_FOREIGN;
-    window->brightness = 1.0f;
-    window->next = _this->windows;
-    if (_this->windows) {
-        _this->windows->prev = window;
+    window->display = display;
+    window->next = display->windows;
+    if (display->windows) {
+        display->windows->prev = window;
     }
-    _this->windows = window;
+    display->windows = window;
 
     if (!_this->CreateWindowFrom ||
         _this->CreateWindowFrom(_this, window, data) < 0) {
@@ -1227,11 +976,24 @@ SDL_CreateWindowFrom(const void *data)
 int
 SDL_RecreateWindow(SDL_Window * window, Uint32 flags)
 {
+    const Uint32 allowed_flags = (SDL_WINDOW_FULLSCREEN |
+                                  SDL_WINDOW_OPENGL |
+                                  SDL_WINDOW_BORDERLESS |
+                                  SDL_WINDOW_RESIZABLE |
+                                  SDL_WINDOW_INPUT_GRABBED |
+                                  SDL_WINDOW_FOREIGN);
     char *title = window->title;
 
     if ((flags & SDL_WINDOW_OPENGL) && !_this->GL_CreateContext) {
         SDL_SetError("No OpenGL support in video driver");
         return -1;
+    }
+    if ((window->flags & SDL_WINDOW_OPENGL) != (flags & SDL_WINDOW_OPENGL)) {
+        if (flags & SDL_WINDOW_OPENGL) {
+            SDL_GL_LoadLibrary(NULL);
+        } else {
+            SDL_GL_UnloadLibrary();
+        }
     }
 
     if (window->flags & SDL_WINDOW_FOREIGN) {
@@ -1241,31 +1003,12 @@ SDL_RecreateWindow(SDL_Window * window, Uint32 flags)
         flags &= ~SDL_WINDOW_FOREIGN;
     }
 
-    /* Restore video mode, etc. */
-    SDL_HideWindow(window);
-
-    /* Tear down the old native window */
-    if (window->surface) {
-        window->surface->flags &= ~SDL_DONTFREE;
-        SDL_FreeSurface(window->surface);
-    }
-    if (_this->DestroyWindowFramebuffer) {
-        _this->DestroyWindowFramebuffer(_this, window);
-    }
     if (_this->DestroyWindow && !(flags & SDL_WINDOW_FOREIGN)) {
         _this->DestroyWindow(_this, window);
     }
 
-    if ((window->flags & SDL_WINDOW_OPENGL) != (flags & SDL_WINDOW_OPENGL)) {
-        if (flags & SDL_WINDOW_OPENGL) {
-            SDL_GL_LoadLibrary(NULL);
-        } else {
-            SDL_GL_UnloadLibrary();
-        }
-    }
-
     window->title = NULL;
-    window->flags = ((flags & CREATE_FLAGS) | SDL_WINDOW_HIDDEN);
+    window->flags = (flags & allowed_flags);
 
     if (_this->CreateWindow && !(flags & SDL_WINDOW_FOREIGN)) {
         if (_this->CreateWindow(_this, window) < 0) {
@@ -1280,7 +1023,16 @@ SDL_RecreateWindow(SDL_Window * window, Uint32 flags)
         SDL_SetWindowTitle(window, title);
         SDL_free(title);
     }
-    SDL_FinishWindowCreation(window, flags);
+    if (flags & SDL_WINDOW_MAXIMIZED) {
+        SDL_MaximizeWindow(window);
+    }
+    if (flags & SDL_WINDOW_MINIMIZED) {
+        SDL_MinimizeWindow(window);
+    }
+    if (flags & SDL_WINDOW_SHOWN) {
+        SDL_ShowWindow(window);
+    }
+    SDL_UpdateWindowGrab(window);
 
     return 0;
 }
@@ -1297,13 +1049,18 @@ SDL_Window *
 SDL_GetWindowFromID(Uint32 id)
 {
     SDL_Window *window;
+    int i;
 
     if (!_this) {
         return NULL;
     }
-    for (window = _this->windows; window; window = window->next) {
-        if (window->id == id) {
-            return window;
+    /* FIXME: Should we keep a separate hash table for these? */
+    for (i = _this->num_displays; i--;) {
+        SDL_VideoDisplay *display = &_this->displays[i];
+        for (window = display->windows; window; window = window->next) {
+            if (window->id == id) {
+                return window;
+            }
         }
     }
     return NULL;
@@ -1351,10 +1108,6 @@ void
 SDL_SetWindowIcon(SDL_Window * window, SDL_Surface * icon)
 {
     CHECK_WINDOW_MAGIC(window, );
-
-    if (!icon) {
-        return;
-    }
 
     if (_this->SetWindowIcon) {
         _this->SetWindowIcon(_this, window, icon);
@@ -1422,56 +1175,28 @@ SDL_SetWindowPosition(SDL_Window * window, int x, int y)
 {
     CHECK_WINDOW_MAGIC(window, );
 
-    if (!SDL_WINDOWPOS_ISUNDEFINED(x)) {
+    if (x != SDL_WINDOWPOS_UNDEFINED) {
         window->x = x;
     }
-    if (!SDL_WINDOWPOS_ISUNDEFINED(y)) {
+    if (y != SDL_WINDOWPOS_UNDEFINED) {
         window->y = y;
     }
-    if (SDL_WINDOWPOS_ISCENTERED(x) || SDL_WINDOWPOS_ISCENTERED(y)) {
-        SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
-        int displayIndex;
-        SDL_Rect bounds;
-
-        displayIndex = SDL_GetIndexOfDisplay(display);
-        SDL_GetDisplayBounds(displayIndex, &bounds);
-        if (SDL_WINDOWPOS_ISCENTERED(x)) {
-            window->x = bounds.x + (bounds.w - window->w) / 2;
-        }
-        if (SDL_WINDOWPOS_ISCENTERED(y)) {
-            window->y = bounds.y + (bounds.h - window->h) / 2;
-        }
+    if (_this->SetWindowPosition) {
+        _this->SetWindowPosition(_this, window);
     }
-    if (!(window->flags & SDL_WINDOW_FULLSCREEN)) {
-        if (_this->SetWindowPosition) {
-            _this->SetWindowPosition(_this, window);
-        }
-        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_MOVED, x, y);
-    }
+    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_MOVED, x, y);
 }
 
 void
 SDL_GetWindowPosition(SDL_Window * window, int *x, int *y)
 {
-    /* Clear the values */
-    if (x) {
-        *x = 0;
-    }
-    if (y) {
-        *y = 0;
-    }
-
     CHECK_WINDOW_MAGIC(window, );
 
-    /* Fullscreen windows are always at their display's origin */
-    if (window->flags & SDL_WINDOW_FULLSCREEN) {
-    } else {
-        if (x) {
-            *x = window->x;
-        }
-        if (y) {
-            *y = window->y;
-        }
+    if (x) {
+        *x = window->x;
+    }
+    if (y) {
+        *y = window->y;
     }
 }
 
@@ -1480,38 +1205,19 @@ SDL_SetWindowSize(SDL_Window * window, int w, int h)
 {
     CHECK_WINDOW_MAGIC(window, );
 
-    /* FIXME: Should this change fullscreen modes? */
-    if (!(window->flags & SDL_WINDOW_FULLSCREEN)) {
-        window->w = w;
-        window->h = h;
-        if (_this->SetWindowSize) {
-            _this->SetWindowSize(_this, window);
-        }
-        if (window->w == w && window->h == h) {
-            /* We didn't get a SDL_WINDOWEVENT_RESIZED event (by design) */
-            SDL_OnWindowResized(window);
-        }
+    window->w = w;
+    window->h = h;
+
+    if (_this->SetWindowSize) {
+        _this->SetWindowSize(_this, window);
     }
+    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED, w, h);
 }
 
 void
 SDL_GetWindowSize(SDL_Window * window, int *w, int *h)
 {
-    int dummy;
-
-    if (!w) {
-        w = &dummy;
-    }
-    if (!h) {
-        h = &dummy;
-    }
-
-    *w = 0;
-    *h = 0;
-
-    CHECK_WINDOW_MAGIC(window, );
-
-    if (_this && window && window->magic == &_this->window_magic) {
+    if (window) {
         if (w) {
             *w = window->w;
         }
@@ -1552,8 +1258,6 @@ SDL_HideWindow(SDL_Window * window)
         return;
     }
 
-    SDL_UpdateFullscreenMode(window, SDL_FALSE);
-
     if (_this->HideWindow) {
         _this->HideWindow(_this, window);
     }
@@ -1570,6 +1274,9 @@ SDL_RaiseWindow(SDL_Window * window)
     }
     if (_this->RaiseWindow) {
         _this->RaiseWindow(_this, window);
+    } else {
+        /* FIXME: What we really want is a way to request focus */
+        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_FOCUS_GAINED, 0, 0);
     }
 }
 
@@ -1585,6 +1292,7 @@ SDL_MaximizeWindow(SDL_Window * window)
     if (_this->MaximizeWindow) {
         _this->MaximizeWindow(_this, window);
     }
+    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_MAXIMIZED, 0, 0);
 }
 
 void
@@ -1596,11 +1304,10 @@ SDL_MinimizeWindow(SDL_Window * window)
         return;
     }
 
-    SDL_UpdateFullscreenMode(window, SDL_FALSE);
-
     if (_this->MinimizeWindow) {
         _this->MinimizeWindow(_this, window);
     }
+    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_MINIMIZED, 0, 0);
 }
 
 void
@@ -1615,23 +1322,29 @@ SDL_RestoreWindow(SDL_Window * window)
     if (_this->RestoreWindow) {
         _this->RestoreWindow(_this, window);
     }
+    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESTORED, 0, 0);
 }
 
 int
-SDL_SetWindowFullscreen(SDL_Window * window, SDL_bool fullscreen)
+SDL_SetWindowFullscreen(SDL_Window * window, int fullscreen)
 {
     CHECK_WINDOW_MAGIC(window, -1);
 
-    if (!!fullscreen == !!(window->flags & SDL_WINDOW_FULLSCREEN)) {
+    if (fullscreen) {
+        fullscreen = SDL_WINDOW_FULLSCREEN;
+    }
+    if ((window->flags & SDL_WINDOW_FULLSCREEN) == fullscreen) {
         return 0;
     }
     if (fullscreen) {
         window->flags |= SDL_WINDOW_FULLSCREEN;
+
+        SDL_UpdateFullscreenMode(window, SDL_TRUE);
     } else {
         window->flags &= ~SDL_WINDOW_FULLSCREEN;
-    }
-    SDL_UpdateFullscreenMode(window, FULLSCREEN_VISIBLE(window));
 
+        SDL_UpdateFullscreenMode(window, SDL_FALSE);
+    }
     return 0;
 }
 
@@ -1664,16 +1377,8 @@ SDL_GetWindowSurface(SDL_Window * window)
 {
     CHECK_WINDOW_MAGIC(window, NULL);
 
-    if (!window->surface_valid) {
-        if (window->surface) {
-            window->surface->flags &= ~SDL_DONTFREE;
-            SDL_FreeSurface(window->surface);
-        }
+    if (!window->surface) {
         window->surface = SDL_CreateWindowFramebuffer(window);
-        if (window->surface) {
-            window->surface_valid = SDL_TRUE;
-            window->surface->flags |= SDL_DONTFREE;
-        }
     }
     return window->surface;
 }
@@ -1689,125 +1394,37 @@ SDL_UpdateWindowSurface(SDL_Window * window)
     full_rect.y = 0;
     full_rect.w = window->w;
     full_rect.h = window->h;
-    return SDL_UpdateWindowSurfaceRects(window, &full_rect, 1);
+    return SDL_UpdateWindowSurfaceRects(window, 1, &full_rect);
 }
 
 int
-SDL_UpdateWindowSurfaceRects(SDL_Window * window, SDL_Rect * rects,
-                             int numrects)
+SDL_UpdateWindowSurfaceRects(SDL_Window * window,
+                             int numrects, SDL_Rect * rects)
 {
     CHECK_WINDOW_MAGIC(window, -1);
 
-    if (!window->surface_valid) {
+    if (!window->surface) {
         SDL_SetError("Window surface is invalid, please call SDL_GetWindowSurface() to get a new surface");
         return -1;
     }
 
-    return _this->UpdateWindowFramebuffer(_this, window, rects, numrects);
+    return _this->UpdateWindowFramebuffer(_this, window, numrects, rects);
 }
 
-int
-SDL_SetWindowBrightness(SDL_Window * window, float brightness)
+void
+SDL_SetWindowGrab(SDL_Window * window, int mode)
 {
-    Uint16 ramp[256];
-    int status;
+    CHECK_WINDOW_MAGIC(window, );
 
-    CHECK_WINDOW_MAGIC(window, -1);
-
-    SDL_CalculateGammaRamp(brightness, ramp);
-    status = SDL_SetWindowGammaRamp(window, ramp, ramp, ramp);
-    if (status == 0) {
-        window->brightness = brightness;
+    if ((!!mode == !!(window->flags & SDL_WINDOW_INPUT_GRABBED))) {
+        return;
     }
-    return status;
-}
-
-float
-SDL_GetWindowBrightness(SDL_Window * window)
-{
-    CHECK_WINDOW_MAGIC(window, 1.0f);
-
-    return window->brightness;
-}
-
-int
-SDL_SetWindowGammaRamp(SDL_Window * window, const Uint16 * red,
-                                            const Uint16 * green,
-                                            const Uint16 * blue)
-{
-    CHECK_WINDOW_MAGIC(window, -1);
-
-    if (!_this->SetWindowGammaRamp) {
-        SDL_Unsupported();
-        return -1;
-    }
-
-    if (!window->gamma) {
-        if (SDL_GetWindowGammaRamp(window, NULL, NULL, NULL) < 0) {
-            return -1;
-        }
-    }
-
-    if (red) {
-        SDL_memcpy(&window->gamma[0*256], red, 256*sizeof(Uint16));
-    }
-    if (green) {
-        SDL_memcpy(&window->gamma[1*256], green, 256*sizeof(Uint16));
-    }
-    if (blue) {
-        SDL_memcpy(&window->gamma[2*256], blue, 256*sizeof(Uint16));
-    }
-    if (window->flags & SDL_WINDOW_INPUT_FOCUS) {
-        return _this->SetWindowGammaRamp(_this, window, window->gamma);
+    if (mode) {
+        window->flags |= SDL_WINDOW_INPUT_GRABBED;
     } else {
-        return 0;
+        window->flags &= ~SDL_WINDOW_INPUT_GRABBED;
     }
-}
-
-int
-SDL_GetWindowGammaRamp(SDL_Window * window, Uint16 * red,
-                                            Uint16 * green,
-                                            Uint16 * blue)
-{
-    CHECK_WINDOW_MAGIC(window, -1);
-
-    if (!window->gamma) {
-        int i;
-
-        window->gamma = (Uint16 *)SDL_malloc(256*6*sizeof(Uint16));
-        if (!window->gamma) {
-            SDL_OutOfMemory();
-            return -1;
-        }
-        window->saved_gamma = window->gamma + 3*256;
-
-        if (_this->GetWindowGammaRamp) {
-            if (_this->GetWindowGammaRamp(_this, window, window->gamma) < 0) {
-                return -1;
-            }
-        } else {
-            /* Create an identity gamma ramp */
-            for (i = 0; i < 256; ++i) {
-                Uint16 value = (Uint16)((i << 8) | i);
-
-                window->gamma[0*256+i] = value;
-                window->gamma[1*256+i] = value;
-                window->gamma[2*256+i] = value;
-            }
-        }
-        SDL_memcpy(window->saved_gamma, window->gamma, 3*256*sizeof(Uint16));
-    }
-
-    if (red) {
-        SDL_memcpy(red, &window->gamma[0*256], 256*sizeof(Uint16));
-    }
-    if (green) {
-        SDL_memcpy(green, &window->gamma[1*256], 256*sizeof(Uint16));
-    }
-    if (blue) {
-        SDL_memcpy(blue, &window->gamma[2*256], 256*sizeof(Uint16));
-    }
-    return 0;
+    SDL_UpdateWindowGrab(window);
 }
 
 static void
@@ -1818,26 +1435,10 @@ SDL_UpdateWindowGrab(SDL_Window * window)
     }
 }
 
-void
-SDL_SetWindowGrab(SDL_Window * window, SDL_bool grabbed)
-{
-    CHECK_WINDOW_MAGIC(window, );
-
-    if (!!grabbed == !!(window->flags & SDL_WINDOW_INPUT_GRABBED)) {
-        return;
-    }
-    if (grabbed) {
-        window->flags |= SDL_WINDOW_INPUT_GRABBED;
-    } else {
-        window->flags &= ~SDL_WINDOW_INPUT_GRABBED;
-    }
-    SDL_UpdateWindowGrab(window);
-}
-
-SDL_bool
+int
 SDL_GetWindowGrab(SDL_Window * window)
 {
-    CHECK_WINDOW_MAGIC(window, SDL_FALSE);
+    CHECK_WINDOW_MAGIC(window, 0);
 
     return ((window->flags & SDL_WINDOW_INPUT_GRABBED) != 0);
 }
@@ -1845,7 +1446,8 @@ SDL_GetWindowGrab(SDL_Window * window)
 void
 SDL_OnWindowShown(SDL_Window * window)
 {
-    SDL_OnWindowRestored(window);
+    SDL_RaiseWindow(window);
+    SDL_UpdateFullscreenMode(window, SDL_TRUE);
 }
 
 void
@@ -1857,8 +1459,10 @@ SDL_OnWindowHidden(SDL_Window * window)
 void
 SDL_OnWindowResized(SDL_Window * window)
 {
-    window->surface_valid = SDL_FALSE;
-    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_SIZE_CHANGED, window->w, window->h);
+    if (window->surface) {
+        SDL_FreeSurface(window->surface);
+        window->surface = NULL;
+    }
 }
 
 void
@@ -1871,21 +1475,19 @@ void
 SDL_OnWindowRestored(SDL_Window * window)
 {
     SDL_RaiseWindow(window);
-
-    if (FULLSCREEN_VISIBLE(window)) {
-        SDL_UpdateFullscreenMode(window, SDL_TRUE);
-    }
+    SDL_UpdateFullscreenMode(window, SDL_TRUE);
 }
 
 void
 SDL_OnWindowFocusGained(SDL_Window * window)
 {
-    if (window->gamma && _this->SetWindowGammaRamp) {
-        _this->SetWindowGammaRamp(_this, window, window->gamma);
-    }
+    SDL_VideoDisplay *display = window->display;
 
-    if ((window->flags & (SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_FULLSCREEN)) &&
-        _this->SetWindowGrab) {
+    if (display->gamma && _this->SetDisplayGammaRamp) {
+        _this->SetDisplayGammaRamp(_this, display, display->gamma);
+    }
+    if ((window->flags & (SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_FULLSCREEN))
+        && _this->SetWindowGrab) {
         _this->SetWindowGrab(_this, window);
     }
 }
@@ -1893,30 +1495,34 @@ SDL_OnWindowFocusGained(SDL_Window * window)
 void
 SDL_OnWindowFocusLost(SDL_Window * window)
 {
-    if (window->gamma && _this->SetWindowGammaRamp) {
-        _this->SetWindowGammaRamp(_this, window, window->saved_gamma);
-    }
-
-    if ((window->flags & (SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_FULLSCREEN)) &&
-        _this->SetWindowGrab) {
-        _this->SetWindowGrab(_this, window);
-    }
+    SDL_VideoDisplay *display = window->display;
 
     /* If we're fullscreen on a single-head system and lose focus, minimize */
-    if ((window->flags & SDL_WINDOW_FULLSCREEN) && _this->num_displays == 1) {
+    if ((window->flags & SDL_WINDOW_FULLSCREEN) &&
+        _this->num_displays == 1) {
         SDL_MinimizeWindow(window);
+    }
+
+    if (display->gamma && _this->SetDisplayGammaRamp) {
+        _this->SetDisplayGammaRamp(_this, display, display->saved_gamma);
+    }
+    if ((window->flags & (SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_FULLSCREEN))
+        && _this->SetWindowGrab) {
+        _this->SetWindowGrab(_this, window);
     }
 }
 
 SDL_Window *
 SDL_GetFocusWindow(void)
 {
+    SDL_VideoDisplay *display;
     SDL_Window *window;
 
     if (!_this) {
         return NULL;
     }
-    for (window = _this->windows; window; window = window->next) {
+    display = SDL_CurrentDisplay;
+    for (window = display->windows; window; window = window->next) {
         if (window->flags & SDL_WINDOW_INPUT_FOCUS) {
             return window;
         }
@@ -1932,12 +1538,8 @@ SDL_DestroyWindow(SDL_Window * window)
     CHECK_WINDOW_MAGIC(window, );
 
     /* Restore video mode, etc. */
-    SDL_HideWindow(window);
+    SDL_UpdateFullscreenMode(window, SDL_FALSE);
 
-    if (window->surface) {
-        window->surface->flags &= ~SDL_DONTFREE;
-        SDL_FreeSurface(window->surface);
-    }
     if (_this->DestroyWindowFramebuffer) {
         _this->DestroyWindowFramebuffer(_this, window);
     }
@@ -1948,20 +1550,12 @@ SDL_DestroyWindow(SDL_Window * window)
         SDL_GL_UnloadLibrary();
     }
 
-    display = SDL_GetDisplayForWindow(window);
-    if (display->fullscreen_window == window) {
-        display->fullscreen_window = NULL;
-    }
-
     /* Now invalidate magic */
     window->magic = NULL;
 
     /* Free memory associated with the window */
     if (window->title) {
         SDL_free(window->title);
-    }
-    if (window->gamma) {
-        SDL_free(window->gamma);
     }
     while (window->data) {
         SDL_WindowUserData *data = window->data;
@@ -1972,13 +1566,14 @@ SDL_DestroyWindow(SDL_Window * window)
     }
 
     /* Unlink the window from the list */
+    display = window->display;
     if (window->next) {
         window->next->prev = window->prev;
     }
     if (window->prev) {
         window->prev->next = window->next;
     } else {
-        _this->windows = window->next;
+        display->windows = window->next;
     }
 
     SDL_free(window);
@@ -2041,8 +1636,11 @@ SDL_VideoQuit(void)
     SDL_EnableScreenSaver();
 
     /* Clean up the system video */
-    while (_this->windows) {
-        SDL_DestroyWindow(_this->windows);
+    for (i = _this->num_displays; i--;) {
+        SDL_VideoDisplay *display = &_this->displays[i];
+        while (display->windows) {
+            SDL_DestroyWindow(display->windows);
+        }
     }
     _this->VideoQuit(_this);
 
@@ -2061,6 +1659,10 @@ SDL_VideoQuit(void)
         if (display->desktop_mode.driverdata) {
             SDL_free(display->desktop_mode.driverdata);
             display->desktop_mode.driverdata = NULL;
+        }
+        if (display->gamma) {
+            SDL_free(display->gamma);
+            display->gamma = NULL;
         }
         if (display->driverdata) {
             SDL_free(display->driverdata);
@@ -2149,7 +1751,7 @@ SDL_GL_UnloadLibrary(void)
 SDL_bool
 SDL_GL_ExtensionSupported(const char *extension)
 {
-#if SDL_VIDEO_OPENGL || SDL_VIDEO_OPENGL_ES || SDL_VIDEO_OPENGL_ES2
+#if SDL_VIDEO_OPENGL || SDL_VIDEO_OPENGL_ES
     const GLubyte *(APIENTRY * glGetStringFunc) (GLenum);
     const char *extensions;
     const char *start;
@@ -2203,7 +1805,7 @@ SDL_GL_ExtensionSupported(const char *extension)
 int
 SDL_GL_SetAttribute(SDL_GLattr attr, int value)
 {
-#if SDL_VIDEO_OPENGL || SDL_VIDEO_OPENGL_ES || SDL_VIDEO_OPENGL_ES2
+#if SDL_VIDEO_OPENGL || SDL_VIDEO_OPENGL_ES
     int retval;
 
     if (!_this) {
@@ -2284,7 +1886,7 @@ SDL_GL_SetAttribute(SDL_GLattr attr, int value)
 int
 SDL_GL_GetAttribute(SDL_GLattr attr, int *value)
 {
-#if SDL_VIDEO_OPENGL || SDL_VIDEO_OPENGL_ES || SDL_VIDEO_OPENGL_ES2
+#if SDL_VIDEO_OPENGL || SDL_VIDEO_OPENGL_ES
     void (APIENTRY * glGetIntegervFunc) (GLenum pname, GLint * params);
     GLenum(APIENTRY * glGetErrorFunc) (void);
     GLenum attrib = 0;
@@ -2304,6 +1906,9 @@ SDL_GL_GetAttribute(SDL_GLattr attr, int *value)
     *value = 0;
 
     switch (attr) {
+    case SDL_GL_RETAINED_BACKING:
+        *value = _this->gl_config.retained_backing;
+        return 0;
     case SDL_GL_RED_SIZE:
         attrib = GL_RED_BITS;
         break;
@@ -2317,7 +1922,7 @@ SDL_GL_GetAttribute(SDL_GLattr attr, int *value)
         attrib = GL_ALPHA_BITS;
         break;
     case SDL_GL_DOUBLEBUFFER:
-#if SDL_VIDEO_OPENGL
+#ifndef SDL_VIDEO_OPENGL_ES
         attrib = GL_DOUBLEBUFFER;
         break;
 #else
@@ -2333,7 +1938,7 @@ SDL_GL_GetAttribute(SDL_GLattr attr, int *value)
     case SDL_GL_STENCIL_SIZE:
         attrib = GL_STENCIL_BITS;
         break;
-#if SDL_VIDEO_OPENGL
+#ifndef SDL_VIDEO_OPENGL_ES
     case SDL_GL_ACCUM_RED_SIZE:
         attrib = GL_ACCUM_RED_BITS;
         break;
@@ -2360,14 +1965,14 @@ SDL_GL_GetAttribute(SDL_GLattr attr, int *value)
         return 0;
 #endif
     case SDL_GL_MULTISAMPLEBUFFERS:
-#if SDL_VIDEO_OPENGL
+#ifndef SDL_VIDEO_OPENGL_ES
         attrib = GL_SAMPLE_BUFFERS_ARB;
 #else
         attrib = GL_SAMPLE_BUFFERS;
 #endif
         break;
     case SDL_GL_MULTISAMPLESAMPLES:
-#if SDL_VIDEO_OPENGL
+#ifndef SDL_VIDEO_OPENGL_ES
         attrib = GL_SAMPLES_ARB;
 #else
         attrib = GL_SAMPLES;
@@ -2398,21 +2003,6 @@ SDL_GL_GetAttribute(SDL_GLattr attr, int *value)
         {
             /* FIXME: How do we get this information? */
             *value = (_this->gl_config.accelerated != 0);
-            return 0;
-        }
-    case SDL_GL_RETAINED_BACKING:
-        {
-            *value = _this->gl_config.retained_backing;
-            return 0;
-        }
-    case SDL_GL_CONTEXT_MAJOR_VERSION:
-        {
-            *value = _this->gl_config.major_version;
-            return 0;
-        }
-    case SDL_GL_CONTEXT_MINOR_VERSION:
-        {
-            *value = _this->gl_config.minor_version;
             return 0;
         }
     default:

@@ -6,7 +6,7 @@ class Globals {
 
 	public static final String ApplicationName = "Instead";
 
-	public static final String AppVer = "1.3.4.3";
+	public static final String AppVer = "1.4.4.3";
 
 	//public static final String TAG = "LEXX_Activity";
 
@@ -17,8 +17,9 @@ class Globals {
 	public static final String GameListDownloadUrl = "http://instead-launcher.googlecode.com/svn/pool/game_list.xml";
 	public static final String GameListAltDownloadUrl = "http://instead-launcher.googlecode.com/svn/pool/game_list_alt.xml";
 	public static final String GameDir = "appdata/games/";
+	public static final String SaveDir = "appdata/saves/";
 	public static final String Options = "appdata/insteadrc";
-
+	public static final String GameFlags = ".gameflags";
 	public static final String DataFlag = ".version";
 	public static final int BASIC = 1;
 	public static final int ALTER = 2;
@@ -29,8 +30,17 @@ class Globals {
 		public static final String ALL = "";
 	}
 
+	public static String getStorage(){
+		return android.os.Environment.getExternalStorageDirectory().toString()+"/";
+	}
+
+
+	public static String getAutoSavePath(String f){
+		return getOutFilePath(SaveDir+f+"/autosave");
+	}
+	
 	public static String getOutFilePath(final String filename) {
-		return "/sdcard/" + Globals.ApplicationName + "/" + filename;
+		return getStorage() + Globals.ApplicationName + "/" + filename;
 	};
 	
 	public static void delete(File file) {
@@ -50,13 +60,22 @@ class Globals {
 					delete(fileDelete);
 				}
 				if (file.list().length == 0) {
+					
+					try{
 					file.delete();
-
+					} catch(NullPointerException e){
+						
+					}
 				}
 			}
 
 		} else {
+			
+			try{
 			file.delete();
+			} catch(NullPointerException e){
+				
+			}
 		}
 	}
 }

@@ -1,7 +1,7 @@
 package com.silentlexx.instead;
 
 import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
+
 import javax.microedition.khronos.egl.*;
 
 import android.app.*;
@@ -11,21 +11,23 @@ import android.os.*;
 import android.util.Log;
 import android.graphics.*;
 import android.media.*;
-import android.hardware.*;
 
-
+/**
+ * SDL Activity
+ */
 public class SDLActivity extends Activity {
 
 	// Main components
 	private static SDLActivity mSingleton;
 	private static SDLSurface mSurface;
 	private static Display display;
-	private PowerManager.WakeLock wakeLock = null;
-	private static String game = null;
+	
 	// Audio
 	private static Thread mAudioThread;
 	private static AudioTrack mAudioTrack;
-
+	
+	private static String game = null;
+	
 	// Load the .so
 	static {
 		System.loadLibrary("SDL");
@@ -47,14 +49,14 @@ public class SDLActivity extends Activity {
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,
 				Globals.ApplicationName);
-
+				
 		Bundle b = getIntent().getExtras();
-		if (b != null) {
+		if(b!=null){
 			game = b.getString("game");
 		}
-
+		
 		display = getWindowManager().getDefaultDisplay();
-
+		
 		// So we can call stuff from static callbacks
 		mSingleton = this;
 
@@ -63,16 +65,7 @@ public class SDLActivity extends Activity {
 		setContentView(mSurface);
 		SurfaceHolder holder = mSurface.getHolder();
 		holder.setType(SurfaceHolder.SURFACE_TYPE_GPU);
-	}
 
-	public static String getRes() {
-		int x = display.getWidth();
-		int y = display.getHeight();
-		return x + "x" + y;
-	}
-
-	public static String getGame() {
-		return game;
 	}
 
 	// Events
@@ -103,6 +96,10 @@ public class SDLActivity extends Activity {
 			}
 		}
 	};
+	
+	
+	
+	
 
 	// Send a message from the SDLMain thread
 	void sendCommand(int command, Object data) {
@@ -112,8 +109,8 @@ public class SDLActivity extends Activity {
 		commandHandler.sendMessage(msg);
 	}
 
-	// C functions we call\
-	public static native void nativeInit(String jres, String jgame);
+	// C functions we call
+	public static native void nativeInit(String jpath, String jres, String jgame);
 
 	public static native void nativeQuit();
 
@@ -133,17 +130,32 @@ public class SDLActivity extends Activity {
 	public static native void nativeSave();
 
 	public static native void nativeStop();
+	
+
+	private PowerManager.WakeLock wakeLock = null;
 
 	// Java functions called from C
 
-	public static boolean createGLContext(int majorVersion, int minorVersion) {
-		return mSurface.initEGL(majorVersion, minorVersion);
+	public static void createGLContext() {
+		mSurface.initEGL();
 	}
 
 	public static void flipBuffers() {
 		mSurface.flipEGL();
 	}
 
+
+	public static String getRes() {
+		int x = display.getWidth();
+		int y = display.getHeight();
+		return x + "x" + y;
+	}
+
+	public static String getGame() {
+		return game;
+	}
+	
+	
 	public static void setActivityTitle(String title) {
 		// Called from SDLMain() thread and can't directly affect the view
 		mSingleton.sendCommand(COMMAND_CHANGE_TITLE, title);
@@ -264,6 +276,8 @@ public class SDLActivity extends Activity {
 			mAudioTrack = null;
 		}
 	}
+	
+	
 }
 
 /**
@@ -272,10 +286,14 @@ public class SDLActivity extends Activity {
 class SDLMain implements Runnable {
 	public void run() {
 		// Runs SDL_main()
-		// SDLActivity.nativeInit();
-		SDLActivity.nativeInit(SDLActivity.getRes(), SDLActivity.getGame());
-		// Log.v("SDL", "SDL thread terminated");
+		
+		// Log.v("SDL", "SDL res "+SDLActivity.res);
+		
+		SDLActivity.nativeInit(Globals.getStorage() + Globals.ApplicationName, SDLActivity.getRes(),SDLActivity.getGame());
+		
+		
 	}
+	
 }
 
 /**
@@ -295,9 +313,6 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 	private EGLSurface mEGLSurface;
 	private EGLDisplay mEGLDisplay;
 
-	// Sensors
-	private static SensorManager mSensorManager;
-
 	// Startup
 	public SDLSurface(Context context) {
 		super(context);
@@ -309,14 +324,13 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 		setOnKeyListener(this);
 		setOnTouchListener(this);
 
-		mSensorManager = (SensorManager) context.getSystemService("sensor");
 	}
 
 	// Called when we have a valid drawing surface
 	public void surfaceCreated(SurfaceHolder holder) {
 		// Log.v("SDL", "surfaceCreated()");
-
-	
+		
+		// enableSensor(Sensor.TYPE_ACCELEROMETER, true);
 	}
 
 	// Called when we lose the surface
@@ -338,7 +352,7 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 			// Log.v("SDL", "Finished waiting for SDL thread");
 		}
 
-	
+		// enableSensor(Sensor.TYPE_ACCELEROMETER, false);
 	}
 
 	// Called when the surface is resized
@@ -404,58 +418,33 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 	}
 
 	// EGL functions
-	public boolean initEGL(int majorVersion, int minorVersion) {
-		Log.v("SDL", "Starting up OpenGL ES " + majorVersion + "."
-				+ minorVersion);
+	public boolean initEGL() {
+		Log.v("SDL", "Starting up");
 
 		try {
+
 			EGL10 egl = (EGL10) EGLContext.getEGL();
 
 			EGLDisplay dpy = egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY);
 
 			int[] version = new int[2];
 			egl.eglInitialize(dpy, version);
-			
-						
-			int EGL_OPENGL_ES_BIT = 1;
-			int EGL_OPENGL_ES2_BIT = 4;
-			int renderableType = 0;
-			
-			if (Globals.EGL_ver == 2) {
-				renderableType = EGL_OPENGL_ES2_BIT;
-			} else if (majorVersion == 1) {
-				renderableType = EGL_OPENGL_ES_BIT;
-			}
+
 			int[] configSpec = {
-					EGL10.EGL_DEPTH_SIZE, 16,
-					EGL10.EGL_RENDERABLE_TYPE, renderableType, EGL10.EGL_NONE };
+			// EGL10.EGL_DEPTH_SIZE, 16,
+			EGL10.EGL_NONE };
 			EGLConfig[] configs = new EGLConfig[1];
 			int[] num_config = new int[1];
-			if (!egl.eglChooseConfig(dpy, configSpec, configs, 1, num_config)
-					|| num_config[0] == 0) {
-				Log.e("SDL", "No EGL config available");
-				return false;
-			}
+			egl.eglChooseConfig(dpy, configSpec, configs, 1, num_config);
 			EGLConfig config = configs[0];
 
 			EGLContext ctx = egl.eglCreateContext(dpy, config,
 					EGL10.EGL_NO_CONTEXT, null);
-			if (ctx == EGL10.EGL_NO_CONTEXT) {
-				Log.e("SDL", "Couldn't create context");
-				return false;
-			}
 
 			EGLSurface surface = egl.eglCreateWindowSurface(dpy, config, this,
 					null);
-			if (surface == EGL10.EGL_NO_SURFACE) {
-				Log.e("SDL", "Couldn't create surface");
-				return false;
-			}
-			
-			if (!egl.eglMakeCurrent(dpy, surface, surface, ctx)) {
-				Log.e("SDL", "Couldn't make context current");
-				return false;
-			}
+
+			egl.eglMakeCurrent(dpy, surface, surface, ctx);
 
 			mEGLContext = ctx;
 			mEGLDisplay = dpy;
@@ -536,9 +525,5 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 		SDLActivity.onNativeTouch(action, x, y, p);
 		return true;
 	}
-
-
-
-
 
 }

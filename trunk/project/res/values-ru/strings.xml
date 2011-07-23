@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <resources>
-    <string name="app_name">INSTEAD</string>
-    <string name="run">Войти в игру</string>
+    <string name="app_name">Instead</string>
+    <string name="run">Начать игру</string>
     <string name="gmlist">Список игр</string>
     <string name="exit">Выйти</string>
     <string name="writefile">Запись файла</string>
@@ -13,14 +13,12 @@
     <string name="connect">Соединяемся</string>
     <string name="ready">Готово</string>
     <string name="init">Инициализация</string>
-    
-<string name="update">Обновить список игр</string>
+    <string name="update">Обновить список игр</string>
     <string name="menudel">Удалить игру</string>
     <string name="menudown">Загрузить игру</string>
-    <string name="menustart">Запустить игру</string>
+    <string name="menustart">Начать игру</string>
     <string name="menuupd">Обновить игру</string>
-    <string name="redwn">Переустановить data-файлы на SD</string>
-    <string name="rcdel">Пересоздать настройки</string>
+    <string name="redwn">Переустановить data-файлы на SD и стереть настройки</string>
     <string name="installed">Установленные</string>
     <string name="filtr">Фильтр</string>
     <string name="all">Все</string>
@@ -46,37 +44,44 @@
     <string name="serverr">Ошибка соединения...</string>
     <string name="nodata">Data-файлов не найдено!</string>
     <string name="listupd">Создание списка игр...</string>
-    
     <string name="yesno">Удалить игру?</string>
     <string name="yes">Да</string>
     <string name="no">Нет</string>
-<string name="alang">Все языки</string>
+    <string name="alang">Все языки</string>
     <string name="blang">На вашем языке</string>
-<string name="lang">Язык</string>
+    <string name="lang">Язык</string>
     <string name="ag_name">Директория</string>
     <string name="agame">О игре</string>
     <string name="ag_url">Сайт игры</string>
     <string name="ag_lang">Язык</string>
     <string name="ag_title">Название</string>
-    <string name="ag_file">Архив</string>
+    <string name="ag_file">Zip url</string>
     <string name="ag_ver">Версия</string>
     <string name="ag_installed">Установленная</string>
     <string name="ag_new">Не уставлено</string>
     <string name="ag_update">Доступна новая версия</string>
     <string name="ag_status">Состояние</string>
     <string name="dwncancel">Загрузка отменена</string>
-<string name="langru">Русский</string>
+    <string name="langru">Русский</string>
     <string name="langen">Английский</string>
-<string name="zipsize">Размер</string>
+    <string name="zipsize">Размер</string>
     <string name="mb">МБ</string>
     <string name="dwnsize">Размер рагрузки</string>
     <string name="sizeyesno">Продолжить загрузку?</string>
-<string name="waitdwn">Ждите, идет загрузка</string>
-<string name="na">Недоступно</string>
-<string name="downfile">Загузка файла в</string>
-<string name="about_instead">Интерпретатор простых текстовых приключений:\nКосых П.А. \'2009-2011\n\nПортирование на Android:\nМахно А.И. \'2010-2011\n\nСайт проекта:\nhttp://instead.googlecode.com\n\n\nБлагодарности за финансовую поддержку выражаем:\nXlab</string>
+    <string name="waitdwn">Ждите, идет загрузка</string>
+    <string name="na">Недоступно</string>
+    <string name="downfile">Загузка файла в</string>
+    <string name="about_instead">Интерпретатор простых текстовых приключений:\nКосых П.А. \'2009-2011\n\nПортирование на Android:\nМахно А.И. \'2010-2011\n\nСайт проекта:\nhttp://instead.googlecode.com\n\n\nБлагодарности за финансовую поддержку выражаем:\nXlab</string>
     <string name="ok">Ок</string>
-<string name="about_btn">О INSTEAD</string>
-<string name="instdata">Установка</string>
+    <string name="about_btn">О Instead</string>
+    <string name="instdata">Установка</string>
     <string name="conferror">Не правельно определено разрешение экрана! Попробуйте пересоздать настройки!</string>
+    <string name="ourtheme">Свои темы в играх</string>
+    <string name="flage">Большой</string>
+    <string name="fnormal">Нормальный</string>
+    <string name="fsmall">Маленький</string>
+    <string name="fvlage">Очень большой</string>
+    <string name="fontsize">Размер шрифта</string>
+    <string name="menunewstart">Начать новую игру</string>
+    <string name="vsmall">Очень маленький</string>
 </resources>

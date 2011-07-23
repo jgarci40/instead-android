@@ -31,7 +31,8 @@ LOCAL_SRC_FILES := \
 	$(wildcard $(LOCAL_PATH)/src/loadso/dlopen/*.c) \
 	$(wildcard $(LOCAL_PATH)/src/power/*.c) \
 	$(wildcard $(LOCAL_PATH)/src/render/*.c) \
-	$(wildcard $(LOCAL_PATH)/src/render/*/*.c) \
+	$(wildcard $(LOCAL_PATH)/src/render/opengles/*.c) \
+	$(wildcard $(LOCAL_PATH)/src/render/software/*.c) \
 	$(wildcard $(LOCAL_PATH)/src/stdlib/*.c) \
 	$(wildcard $(LOCAL_PATH)/src/thread/*.c) \
 	$(wildcard $(LOCAL_PATH)/src/thread/pthread/*.c) \
@@ -40,6 +41,6 @@ LOCAL_SRC_FILES := \
 	$(wildcard $(LOCAL_PATH)/src/video/*.c) \
 	$(wildcard $(LOCAL_PATH)/src/video/android/*.c))
 
-LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog
+LOCAL_LDLIBS := -ldl -lGLESv1_CM -llog
 
 include $(BUILD_SHARED_LIBRARY)
