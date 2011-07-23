@@ -1,14 +1,17 @@
 stead = {
-	version = "1.3.5",
+	version = "1.4.4",
 	api_version = "1.1.6", -- last version before 1.2.0
 	table = table,
 	delim = ',',
 	scene_delim = "^^",
 	string = string,
 	math = math,
+	ticks = get_ticks,
+	mouse_pos = mouse_pos,
+	menu_toggle = menu_toggle,
 	io = io,
 	os = os,
-	dir = readdir,
+	readdir = readdir,
 	call_top = 0,
 	cctx = { txt = nil, self = nil },
 --	functions = {}, -- code blocks
@@ -1538,11 +1541,10 @@ function do_ini(self, load)
 		stead.functions[o].key_name = k;
 	end
 	local function call_ini(k, o, ...)
-		v = stead.par('', v, call(o, 'ini'), ...);
+		v = stead.par('', v, call(o, 'ini', ...));
 	end
-
-	math.randomseed(tonumber(os.date("%m%d%H%M%S")))
-	rnd(1); rnd(1); rnd(1); -- Lua bug?
+	math.randomseed(os.time(os.date("*t")))
+	rnd(1); rnd(2); rnd(3); -- Lua bug?
 
 	game.pl = deref(game.pl);
 	game.where = deref(game.where);
@@ -1562,10 +1564,11 @@ function do_ini(self, load)
 	stead.initialized = true
 	return stead.par('',v, self._lastdisp); --stead.par('^^',v);
 end
+stead.do_ini = do_ini
 
 function game_ini(self)
 	local v,vv
-	v = do_ini(self);
+	v = stead.do_ini(self);
 	vv = iface:title(call(self,'nam'));
 	vv = stead.par('^^', vv, call(self,'dsc'));
 	if type(init) == 'function' then
@@ -1577,6 +1580,12 @@ function game_ini(self)
 	return stead.par("^^", vv, v);
 end
 
+function game_start(s)
+	if type(start) == 'function' then
+		start() -- start function
+	end
+end
+
 function game(v)
 	if v.nam == nil then
 		error ("No game name in constructor.", 2);
@@ -1586,6 +1595,9 @@ function game(v)
 	end
 	if v.ini == nil then
 		v.ini = game_ini;
+	end
+	if v.start == nil then
+		v.start = game_start
 	end
 	if v.save == nil then
 		v.save = game_save;
@@ -1790,6 +1802,8 @@ function gamefile(file, forget)
 		end
 		init = function() -- null init function
 		end
+		start = function() -- null start function
+		end
 		for_each_object(function(k, o) -- destroy all objects
 			if o.system_type then
 				return
@@ -1810,6 +1824,8 @@ function gamefile(file, forget)
 		end
 	end
 	if forget then
+		game:start()
+		stead.started = true
 		return goto(here());
 	end
 end
@@ -1880,7 +1896,12 @@ function game_load(self, name)
 		if r then
 			return nil, false
 		end
-		return do_ini(self, true);
+		i, r = stead.do_ini(self, true);
+		if not stead.started then
+			game:start()
+			stead.started = true
+		end
+		return i, r
 	end
 	return nil, false
 end
@@ -2065,11 +2086,11 @@ iface = {
 			if v ~= false and game.showlast then
 				return r;
 			end
-		elseif cmd == 'wait' then
+		elseif cmd == 'wait' then -- nothing todo in game, skip tick
 			v = nil;
-			r = nil;
+			r = true;
 			stead.state = true
-		elseif cmd == 'nop' then
+		elseif cmd == 'nop' then -- inv only
 			v = true;
 			r = nil;
 			stead.state = true
@@ -2080,8 +2101,13 @@ iface = {
 		-- here r is action result, v - ret code value	
 		-- state -- game state changed
 		if stead.state and r == nil and v == true then -- we do nothing
-			return nil;
+			return nil, true; -- menu
 		end
+
+		if stead.state and r == nil and v == nil and stead.api_version >= "1.3.5" then -- new goto
+			return nil, nil -- really nothing
+		end
+
 		if RAW_TEXT then
 			v = false
 		end
@@ -2110,7 +2136,7 @@ iface = {
 		if vv == nil then -- nil is error
 			return ''
 		end
-		return vv;
+		return vv, true; -- action is here
 	end, 
 	shell = function(self)
 		local inp, i, k, cmd, a, n;
@@ -2567,11 +2593,17 @@ function get_music_loop()
 end
 
 function save_music(s)
+	if s == nil then
+		s = self
+	end
 	s.__old_music__ = get_music();
 	s.__old_loop__ = get_music_loop();
 end
 
 function restore_music(s)
+	if s == nil then
+		s = self
+	end
 	set_music(s.__old_music__, s.__old_loop__);
 end
 function dec_music_loop()
@@ -2609,6 +2641,7 @@ if is_sound == nil then
 		return false -- sdl-instead export own function
 	end
 end
+stead.is_sound = is_sound
 
 if get_savepath == nil then
 	function get_savepath()
@@ -2907,6 +2940,7 @@ end
 
 stead.init = function(s)
 	stead.initialized = false
+	stead.started = false
 	stead:objects();
 	s.functions = {} -- code blocks
 	local k,v

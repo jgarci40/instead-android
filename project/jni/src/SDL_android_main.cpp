@@ -19,7 +19,7 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
 // Start up the SDL app
 extern "C" void Java_com_silentlexx_instead_SDLActivity_nativeInit(
-		JNIEnv* env, jclass cls, jstring jres, jstring jgame) {
+		JNIEnv* env, jclass cls, jstring jpath, jstring jres, jstring jgame) {
 
 	/* This interface could expand with ABI negotiation, calbacks, etc. */
 	SDL_Android_Init(env, cls);
@@ -28,8 +28,11 @@ extern "C" void Java_com_silentlexx_instead_SDLActivity_nativeInit(
 	int status;
 	char *argv[6];
 	int n = 1;
-
-
+	if (jpath != NULL) {
+		const char *path = env->GetStringUTFChars(jpath, 0);
+		chdir(strdup(path));
+		env->ReleaseStringUTFChars(jpath, path);
+	}
 
 
 	argv[0] = strdup("sdl-instead");
@@ -57,7 +60,7 @@ extern "C" void Java_com_silentlexx_instead_SDLActivity_nativeInit(
 	}
 	//__android_log_print(ANDROID_LOG_DEBUG, "LEXX_Activity", "SDL param n %i", n);
 
-	chdir("/sdcard/Instead");
+
 	status = SDL_main(n, argv);
 
 

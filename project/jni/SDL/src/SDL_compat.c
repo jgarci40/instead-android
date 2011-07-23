@@ -1,22 +1,23 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
 
@@ -27,62 +28,50 @@
 
 #include "video/SDL_sysvideo.h"
 #include "video/SDL_pixels_c.h"
-#include "render/SDL_yuv_sw_c.h"
-
 
 static SDL_Window *SDL_VideoWindow = NULL;
-static SDL_Surface *SDL_WindowSurface = NULL;
+static SDL_Renderer *SDL_VideoRenderer = NULL;
+static SDL_Texture *SDL_VideoTexture = NULL;
 static SDL_Surface *SDL_VideoSurface = NULL;
 static SDL_Surface *SDL_ShadowSurface = NULL;
 static SDL_Surface *SDL_PublicSurface = NULL;
 static SDL_GLContext *SDL_VideoContext = NULL;
 static Uint32 SDL_VideoFlags = 0;
-static SDL_Rect SDL_VideoViewport;
 static char *wm_title = NULL;
 static SDL_Surface *SDL_VideoIcon;
 static int SDL_enabled_UNICODE = 0;
 
-const char *
+char *
 SDL_AudioDriverName(char *namebuf, int maxlen)
 {
     const char *name = SDL_GetCurrentAudioDriver();
     if (name) {
-        if (namebuf) {
-            SDL_strlcpy(namebuf, name, maxlen);
-            return namebuf;
-        } else {
-            return name;
-        }
+        SDL_strlcpy(namebuf, name, maxlen);
+        return namebuf;
     }
     return NULL;
 }
 
-const char *
+char *
 SDL_VideoDriverName(char *namebuf, int maxlen)
 {
     const char *name = SDL_GetCurrentVideoDriver();
     if (name) {
-        if (namebuf) {
-            SDL_strlcpy(namebuf, name, maxlen);
-            return namebuf;
-        } else {
-            return name;
-        }
+        SDL_strlcpy(namebuf, name, maxlen);
+        return namebuf;
     }
     return NULL;
 }
 
-static int
-GetVideoDisplay()
+static void
+SelectVideoDisplay()
 {
     const char *variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_DISPLAY");
     if ( !variable ) {
         variable = SDL_getenv("SDL_VIDEO_FULLSCREEN_HEAD");
     }
     if ( variable ) {
-        return SDL_atoi(variable);
-    } else {
-        return 0;
+        SDL_SelectVideoDisplay(SDL_atoi(variable));
     }
 }
 
@@ -92,9 +81,16 @@ SDL_GetVideoInfo(void)
     static SDL_VideoInfo info;
     SDL_DisplayMode mode;
 
+    SelectVideoDisplay();
+
     /* Memory leak, compatibility code, who cares? */
-    if (!info.vfmt && SDL_GetDesktopDisplayMode(GetVideoDisplay(), &mode) == 0) {
-        info.vfmt = SDL_AllocFormat(mode.format);
+    if (!info.vfmt && SDL_GetDesktopDisplayMode(&mode) == 0) {
+        int bpp;
+        Uint32 Rmask, Gmask, Bmask, Amask;
+
+        SDL_PixelFormatEnumToMasks(mode.format, &bpp, &Rmask, &Gmask, &Bmask,
+                                   &Amask);
+        info.vfmt = SDL_AllocFormat(bpp, Rmask, Gmask, Bmask, Amask);
         info.current_w = mode.w;
         info.current_h = mode.h;
     }
@@ -110,15 +106,17 @@ SDL_VideoModeOK(int width, int height, int bpp, Uint32 flags)
         return 0;
     }
 
+    SelectVideoDisplay();
+
     if (!(flags & SDL_FULLSCREEN)) {
         SDL_DisplayMode mode;
-        SDL_GetDesktopDisplayMode(GetVideoDisplay(), &mode);
+        SDL_GetDesktopDisplayMode(&mode);
         return SDL_BITSPERPIXEL(mode.format);
     }
 
-    for (i = 0; i < SDL_GetNumDisplayModes(GetVideoDisplay()); ++i) {
+    for (i = 0; i < SDL_GetNumDisplayModes(); ++i) {
         SDL_DisplayMode mode;
-        SDL_GetDisplayMode(GetVideoDisplay(), i, &mode);
+        SDL_GetDisplayMode(i, &mode);
         if (!mode.w || !mode.h || (width == mode.w && height == mode.h)) {
             if (!mode.format) {
                 return bpp;
@@ -141,6 +139,8 @@ SDL_ListModes(const SDL_PixelFormat * format, Uint32 flags)
         return NULL;
     }
 
+    SelectVideoDisplay();
+
     if (!(flags & SDL_FULLSCREEN)) {
         return (SDL_Rect **) (-1);
     }
@@ -152,11 +152,11 @@ SDL_ListModes(const SDL_PixelFormat * format, Uint32 flags)
     /* Memory leak, but this is a compatibility function, who cares? */
     nmodes = 0;
     modes = NULL;
-    for (i = 0; i < SDL_GetNumDisplayModes(GetVideoDisplay()); ++i) {
+    for (i = 0; i < SDL_GetNumDisplayModes(); ++i) {
         SDL_DisplayMode mode;
         int bpp;
 
-        SDL_GetDisplayMode(GetVideoDisplay(), i, &mode);
+        SDL_GetDisplayMode(i, &mode);
         if (!mode.w || !mode.h) {
             return (SDL_Rect **) (-1);
         }
@@ -212,15 +212,10 @@ SDL_CompatEventFilter(void *userdata, SDL_Event * event)
             break;
         case SDL_WINDOWEVENT_RESIZED:
             SDL_FlushEvent(SDL_VIDEORESIZE);
-            /* We don't want to expose that the window width and height will
-               be different if we don't get the desired fullscreen mode.
-            */
-            if (SDL_VideoWindow && !(SDL_GetWindowFlags(SDL_VideoWindow) & SDL_WINDOW_FULLSCREEN)) {
-                fake.type = SDL_VIDEORESIZE;
-                fake.resize.w = event->window.data1;
-                fake.resize.h = event->window.data2;
-                SDL_PushEvent(&fake);
-            }
+            fake.type = SDL_VIDEORESIZE;
+            fake.resize.w = event->window.data1;
+            fake.resize.h = event->window.data2;
+            SDL_PushEvent(&fake);
             break;
         case SDL_WINDOWEVENT_MINIMIZED:
             fake.type = SDL_ACTIVEEVENT;
@@ -288,19 +283,6 @@ SDL_CompatEventFilter(void *userdata, SDL_Event * event)
             //printf("TEXTINPUT: '%s'\n", event->text.text);
             break;
         }
-    case SDL_MOUSEMOTION:
-        {
-            event->motion.x -= SDL_VideoViewport.x;
-            event->motion.y -= SDL_VideoViewport.y;
-            break;
-        }
-    case SDL_MOUSEBUTTONDOWN:
-    case SDL_MOUSEBUTTONUP:
-        {
-            event->button.x -= SDL_VideoViewport.x;
-            event->button.y -= SDL_VideoViewport.y;
-            break;
-        }
     case SDL_MOUSEWHEEL:
         {
             Uint8 button;
@@ -340,7 +322,6 @@ SDL_CompatEventFilter(void *userdata, SDL_Event * event)
 static void
 GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
 {
-    int display = GetVideoDisplay();
     const char *window = SDL_getenv("SDL_VIDEO_WINDOW_POS");
     const char *center = SDL_getenv("SDL_VIDEO_CENTERED");
     if (window) {
@@ -352,20 +333,43 @@ GetEnvironmentWindowPosition(int w, int h, int *x, int *y)
         }
     }
     if (center) {
-        *x = SDL_WINDOWPOS_CENTERED_DISPLAY(display);
-        *y = SDL_WINDOWPOS_CENTERED_DISPLAY(display);
+        SDL_DisplayMode mode;
+        SDL_GetDesktopDisplayMode(&mode);
+        *x = (mode.w - w) / 2;
+        *y = (mode.h - h) / 2;
     }
+}
+
+static SDL_Surface *
+CreateVideoSurface(SDL_Texture * texture)
+{
+    Uint32 format;
+    int w, h;
+    int bpp;
+    Uint32 Rmask, Gmask, Bmask, Amask;
+
+    if (SDL_QueryTexture(texture, &format, NULL, &w, &h) < 0) {
+        return NULL;
+    }
+
+    if (!SDL_PixelFormatEnumToMasks
+        (format, &bpp, &Rmask, &Gmask, &Bmask, &Amask)) {
+        SDL_SetError("Unknown texture format");
+        return NULL;
+    }
+
+    return SDL_CreateRGBSurface(0, w, h, bpp, Rmask, Gmask, Bmask, Amask);
 }
 
 static void
 ClearVideoSurface()
 {
-    if (SDL_ShadowSurface) {
-        SDL_FillRect(SDL_ShadowSurface, NULL,
-            SDL_MapRGB(SDL_ShadowSurface->format, 0, 0, 0));
-    }
-    SDL_FillRect(SDL_WindowSurface, NULL, 0);
-    SDL_UpdateWindowSurface(SDL_VideoWindow);
+    Uint32 black;
+
+    /* Clear the surface for display */
+    black = SDL_MapRGB(SDL_PublicSurface->format, 0, 0, 0);
+    SDL_FillRect(SDL_PublicSurface, NULL, black);
+    SDL_UpdateRect(SDL_PublicSurface, 0, 0, 0, 0);
 }
 
 static void
@@ -394,9 +398,11 @@ static int
 SDL_ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
 {
     int w, h;
+    Uint32 format;
+    int access;
 
     /* We can't resize something we don't have... */
-    if (!SDL_VideoSurface) {
+    if (!SDL_VideoWindow) {
         return -1;
     }
 
@@ -407,9 +413,6 @@ SDL_ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
 
     /* I don't think there's any change we can gracefully make in flags */
     if (flags != SDL_VideoFlags) {
-        return -1;
-    }
-    if (bpp != SDL_VideoSurface->format->BitsPerPixel) {
         return -1;
     }
 
@@ -426,18 +429,23 @@ SDL_ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
         return 0;
     }
 
-    SDL_WindowSurface = SDL_GetWindowSurface(SDL_VideoWindow);
-    if (!SDL_WindowSurface) {
+    /* Destroy the screen texture and recreate it */
+    SDL_QueryTexture(SDL_VideoTexture, &format, &access, &w, &h);
+    SDL_DestroyTexture(SDL_VideoTexture);
+    SDL_VideoTexture = SDL_CreateTexture(SDL_VideoRenderer, format,
+                                         access, width, height);
+    if (!SDL_VideoTexture) {
         return -1;
     }
-    if (SDL_VideoSurface->format != SDL_WindowSurface->format) {
-        return -1;
-    }
+
     SDL_VideoSurface->w = width;
     SDL_VideoSurface->h = height;
-    SDL_VideoSurface->pixels = SDL_WindowSurface->pixels;
-    SDL_VideoSurface->pitch = SDL_WindowSurface->pitch;
+    SDL_CalculatePitch(SDL_VideoSurface);
+    SDL_VideoSurface->pixels =
+        SDL_realloc(SDL_VideoSurface->pixels,
+                    SDL_VideoSurface->h * SDL_VideoSurface->pitch);
     SDL_SetClipRect(SDL_VideoSurface, NULL);
+    SDL_InvalidateMap(SDL_VideoSurface->map);
 
     if (SDL_ShadowSurface) {
         SDL_ShadowSurface->w = width;
@@ -448,8 +456,6 @@ SDL_ResizeVideoMode(int width, int height, int bpp, Uint32 flags)
                         SDL_ShadowSurface->h * SDL_ShadowSurface->pitch);
         SDL_SetClipRect(SDL_ShadowSurface, NULL);
         SDL_InvalidateMap(SDL_ShadowSurface->map);
-    } else {
-        SDL_PublicSurface = SDL_VideoSurface;
     }
 
     ClearVideoSurface();
@@ -461,13 +467,13 @@ SDL_Surface *
 SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
 {
     SDL_DisplayMode desktop_mode;
-    int display = GetVideoDisplay();
-    int window_x = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
-    int window_y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(display);
-    int window_w;
-    int window_h;
+    int window_x = SDL_WINDOWPOS_UNDEFINED;
+    int window_y = SDL_WINDOWPOS_UNDEFINED;
     Uint32 window_flags;
     Uint32 surface_flags;
+    Uint32 i;
+    SDL_RendererInfo info;
+    Uint32 desired_format;
 
     if (!SDL_GetVideoDevice()) {
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
@@ -475,7 +481,9 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
         }
     }
 
-    SDL_GetDesktopDisplayMode(display, &desktop_mode);
+    SelectVideoDisplay();
+
+    SDL_GetDesktopDisplayMode(&desktop_mode);
 
     if (width == 0) {
         width = desktop_mode.w;
@@ -495,12 +503,10 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     /* Destroy existing window */
     SDL_PublicSurface = NULL;
     if (SDL_ShadowSurface) {
-        SDL_ShadowSurface->flags &= ~SDL_DONTFREE;
         SDL_FreeSurface(SDL_ShadowSurface);
         SDL_ShadowSurface = NULL;
     }
     if (SDL_VideoSurface) {
-        SDL_VideoSurface->flags &= ~SDL_DONTFREE;
         SDL_FreeSurface(SDL_VideoSurface);
         SDL_VideoSurface = NULL;
     }
@@ -542,14 +548,12 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     }
     SDL_SetWindowIcon(SDL_VideoWindow, SDL_VideoIcon);
 
-    SetupScreenSaver(flags);
-
     window_flags = SDL_GetWindowFlags(SDL_VideoWindow);
     surface_flags = 0;
     if (window_flags & SDL_WINDOW_FULLSCREEN) {
         surface_flags |= SDL_FULLSCREEN;
     }
-    if ((window_flags & SDL_WINDOW_OPENGL) && (flags & SDL_OPENGL)) {
+    if (window_flags & SDL_WINDOW_OPENGL) {
         surface_flags |= SDL_OPENGL;
     }
     if (window_flags & SDL_WINDOW_RESIZABLE) {
@@ -558,8 +562,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
     if (window_flags & SDL_WINDOW_BORDERLESS) {
         surface_flags |= SDL_NOFRAME;
     }
-
-    SDL_VideoFlags = flags;
 
     /* If we're in OpenGL mode, just create a stub surface and we're done! */
     if (flags & SDL_OPENGL) {
@@ -580,32 +582,34 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
         return SDL_PublicSurface;
     }
 
-    /* Create the screen surface */
-    SDL_WindowSurface = SDL_GetWindowSurface(SDL_VideoWindow);
-    if (!SDL_WindowSurface) {
+    /* Create a renderer for the window */
+    SDL_VideoRenderer = SDL_CreateRenderer(SDL_VideoWindow, -1, 0);
+    if (!SDL_VideoRenderer) {
         return NULL;
     }
 
-    /* Center the public surface in the window surface */
-    SDL_GetWindowSize(SDL_VideoWindow, &window_w, &window_h);
-    SDL_VideoViewport.x = (window_w - width)/2;
-    SDL_VideoViewport.y = (window_h - height)/2;
-    SDL_VideoViewport.w = width;
-    SDL_VideoViewport.h = height;
+    /* Create a texture for the screen surface */
+    SDL_GetRendererInfo(SDL_VideoRenderer, &info);
+    desired_format = info.texture_formats[0];
+    for (i = 0; i < info.num_texture_formats; ++i) {
+        if (!SDL_ISPIXELFORMAT_ALPHA(info.texture_formats[i])) {
+            desired_format = info.texture_formats[i];
+            break;
+        }
+    }
+    SDL_VideoTexture = SDL_CreateTexture(SDL_VideoRenderer, desired_format,
+                                         SDL_TEXTUREACCESS_STREAMING,
+                                         width, height);
+    if (!SDL_VideoTexture) {
+        return NULL;
+    }
 
-    SDL_VideoSurface = SDL_CreateRGBSurfaceFrom(NULL, 0, 0, 32, 0, 0, 0, 0, 0);
+    /* Create the screen surface */
+    SDL_VideoSurface = CreateVideoSurface(SDL_VideoTexture);
+    if (!SDL_VideoSurface) {
+        return NULL;
+    }
     SDL_VideoSurface->flags |= surface_flags;
-    SDL_VideoSurface->flags |= SDL_DONTFREE;
-    SDL_FreeFormat(SDL_VideoSurface->format);
-    SDL_VideoSurface->format = SDL_WindowSurface->format;
-    SDL_VideoSurface->format->refcount++;
-    SDL_VideoSurface->w = width;
-    SDL_VideoSurface->h = height;
-    SDL_VideoSurface->pitch = SDL_WindowSurface->pitch;
-    SDL_VideoSurface->pixels = (void *)((Uint8 *)SDL_WindowSurface->pixels +
-        SDL_VideoViewport.y * SDL_VideoSurface->pitch +
-        SDL_VideoViewport.x  * SDL_VideoSurface->format->BytesPerPixel);
-    SDL_SetClipRect(SDL_VideoSurface, NULL);
 
     /* Create a shadow surface if necessary */
     if ((bpp != SDL_VideoSurface->format->BitsPerPixel)
@@ -616,7 +620,6 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
             return NULL;
         }
         SDL_ShadowSurface->flags |= surface_flags;
-        SDL_ShadowSurface->flags |= SDL_DONTFREE;
 
         /* 8-bit SDL_ShadowSurface surfaces report that they have exclusive palette */
         if (SDL_ShadowSurface->format->palette) {
@@ -624,13 +627,15 @@ SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags)
             SDL_DitherColors(SDL_ShadowSurface->format->palette->colors,
                              SDL_ShadowSurface->format->BitsPerPixel);
         }
-        SDL_FillRect(SDL_ShadowSurface, NULL,
-            SDL_MapRGB(SDL_ShadowSurface->format, 0, 0, 0));
     }
     SDL_PublicSurface =
         (SDL_ShadowSurface ? SDL_ShadowSurface : SDL_VideoSurface);
 
+    SDL_VideoFlags = flags;
+
     ClearVideoSurface();
+
+    SetupScreenSaver(flags);
 
     /* We're finally done! */
     return SDL_PublicSurface;
@@ -721,13 +726,7 @@ SDL_DisplayFormatAlpha(SDL_Surface * surface)
            optimised alpha format is written, add the converter here */
         break;
     }
-    format = SDL_AllocFormat(SDL_MasksToPixelFormatEnum(32, rmask,
-                                                            gmask,
-                                                            bmask,
-                                                            amask));
-    if (!format) {
-        return NULL;
-    }
+    format = SDL_AllocFormat(32, rmask, gmask, bmask, amask);
     converted = SDL_ConvertSurface(surface, format, SDL_RLEACCEL);
     SDL_FreeFormat(format);
     return converted;
@@ -759,36 +758,34 @@ void
 SDL_UpdateRects(SDL_Surface * screen, int numrects, SDL_Rect * rects)
 {
     int i;
+    SDL_Rect rect;
 
     if (screen == SDL_ShadowSurface) {
         for (i = 0; i < numrects; ++i) {
-            SDL_BlitSurface(SDL_ShadowSurface, &rects[i], SDL_VideoSurface,
-                            &rects[i]);
+            SDL_LowerBlit(SDL_ShadowSurface, &rects[i], SDL_VideoSurface,
+                          &rects[i]);
         }
 
         /* Fall through to video surface update */
         screen = SDL_VideoSurface;
     }
     if (screen == SDL_VideoSurface) {
-        if (SDL_VideoViewport.x || SDL_VideoViewport.y) {
-            SDL_Rect *stackrects = SDL_stack_alloc(SDL_Rect, numrects);
-            SDL_Rect *stackrect;
-            const SDL_Rect *rect;
-            
-            /* Offset all the rectangles before updating */
-            for (i = 0; i < numrects; ++i) {
-                rect = &rects[i];
-                stackrect = &stackrects[i];
-                stackrect->x = SDL_VideoViewport.x + rect->x;
-                stackrect->y = SDL_VideoViewport.y + rect->y;
-                stackrect->w = rect->w;
-                stackrect->h = rect->h;
-            }
-            SDL_UpdateWindowSurfaceRects(SDL_VideoWindow, stackrects, numrects);
-            SDL_stack_free(stackrects);
-        } else {
-            SDL_UpdateWindowSurfaceRects(SDL_VideoWindow, rects, numrects);
+        /* The surface memory needs to be copied to texture */
+        int pitch = screen->pitch;
+        int psize = screen->format->BytesPerPixel;
+        for (i = 0; i < numrects; ++i) {
+            const SDL_Rect *rect = &rects[i];
+            void *pixels =
+                (Uint8 *) screen->pixels + rect->y * pitch +
+                rect->x * psize;
+            SDL_UpdateTexture(SDL_VideoTexture, rect, pixels, pitch);
         }
+        rect.x = 0;
+        rect.y = 0;
+        rect.w = screen->w;
+        rect.h = screen->h;
+        SDL_RenderCopy(SDL_VideoRenderer, SDL_VideoTexture, &rect, &rect);
+        SDL_RenderPresent(SDL_VideoRenderer);
     }
 }
 
@@ -833,32 +830,6 @@ SDL_WM_IconifyWindow(void)
 int
 SDL_WM_ToggleFullScreen(SDL_Surface * surface)
 {
-    int length;
-    void *pixels;
-    Uint8 *src, *dst;
-    int row;
-    int window_w;
-    int window_h;
-
-    if (!SDL_PublicSurface) {
-        SDL_SetError("SDL_SetVideoMode() hasn't been called");
-        return 0;
-    }
-
-    /* Copy the old bits out */
-    length = SDL_PublicSurface->w * SDL_PublicSurface->format->BytesPerPixel;
-    pixels = SDL_malloc(SDL_PublicSurface->h * length);
-    if (pixels) {
-        src = (Uint8*)SDL_PublicSurface->pixels;
-        dst = (Uint8*)pixels;
-        for (row = 0; row < SDL_PublicSurface->h; ++row) {
-            SDL_memcpy(dst, src, length);
-            src += SDL_PublicSurface->pitch;
-            dst += length;
-        }
-    }
-
-    /* Do the physical mode switch */
     if (SDL_GetWindowFlags(SDL_VideoWindow) & SDL_WINDOW_FULLSCREEN) {
         if (SDL_SetWindowFullscreen(SDL_VideoWindow, 0) < 0) {
             return 0;
@@ -870,83 +841,6 @@ SDL_WM_ToggleFullScreen(SDL_Surface * surface)
         }
         SDL_PublicSurface->flags |= SDL_FULLSCREEN;
     }
-
-    /* Recreate the screen surface */
-    SDL_WindowSurface = SDL_GetWindowSurface(SDL_VideoWindow);
-    if (!SDL_WindowSurface) {
-        /* We're totally hosed... */
-        return 0;
-    }
-
-    /* Center the public surface in the window surface */
-    SDL_GetWindowSize(SDL_VideoWindow, &window_w, &window_h);
-    SDL_VideoViewport.x = (window_w - SDL_VideoSurface->w)/2;
-    SDL_VideoViewport.y = (window_h - SDL_VideoSurface->h)/2;
-    SDL_VideoViewport.w = SDL_VideoSurface->w;
-    SDL_VideoViewport.h = SDL_VideoSurface->h;
-
-    /* Do some shuffling behind the application's back if format changes */
-    if (SDL_VideoSurface->format->format != SDL_WindowSurface->format->format) {
-        if (SDL_ShadowSurface) {
-            if (SDL_ShadowSurface->format->format == SDL_WindowSurface->format->format) {
-                /* Whee!  We don't need a shadow surface anymore! */
-                SDL_VideoSurface->flags &= ~SDL_DONTFREE;
-                SDL_FreeSurface(SDL_VideoSurface);
-                SDL_free(SDL_ShadowSurface->pixels);
-                SDL_VideoSurface = SDL_ShadowSurface;
-                SDL_VideoSurface->flags |= SDL_PREALLOC;
-                SDL_ShadowSurface = NULL;
-            } else {
-                /* No problem, just change the video surface format */
-                SDL_FreeFormat(SDL_VideoSurface->format);
-                SDL_VideoSurface->format = SDL_WindowSurface->format;
-                SDL_VideoSurface->format->refcount++;
-                SDL_InvalidateMap(SDL_ShadowSurface->map);
-            }
-        } else {
-            /* We can make the video surface the shadow surface */
-            SDL_ShadowSurface = SDL_VideoSurface;
-            SDL_ShadowSurface->pitch = SDL_CalculatePitch(SDL_ShadowSurface);
-            SDL_ShadowSurface->pixels = SDL_malloc(SDL_ShadowSurface->h * SDL_ShadowSurface->pitch);
-            if (!SDL_ShadowSurface->pixels) {
-                /* Uh oh, we're hosed */
-                SDL_ShadowSurface = NULL;
-                return 0;
-            }
-            SDL_ShadowSurface->flags &= ~SDL_PREALLOC;
-
-            SDL_VideoSurface = SDL_CreateRGBSurfaceFrom(NULL, 0, 0, 32, 0, 0, 0, 0, 0);
-            SDL_VideoSurface->flags = SDL_ShadowSurface->flags;
-            SDL_VideoSurface->flags |= SDL_PREALLOC;
-            SDL_FreeFormat(SDL_VideoSurface->format);
-            SDL_VideoSurface->format = SDL_WindowSurface->format;
-            SDL_VideoSurface->format->refcount++;
-            SDL_VideoSurface->w = SDL_ShadowSurface->w;
-            SDL_VideoSurface->h = SDL_ShadowSurface->h;
-        }
-    }
-
-    /* Update the video surface */
-    SDL_VideoSurface->pitch = SDL_WindowSurface->pitch;
-    SDL_VideoSurface->pixels = (void *)((Uint8 *)SDL_WindowSurface->pixels +
-        SDL_VideoViewport.y * SDL_VideoSurface->pitch +
-        SDL_VideoViewport.x  * SDL_VideoSurface->format->BytesPerPixel);
-    SDL_SetClipRect(SDL_VideoSurface, NULL);
-
-    /* Copy the old bits back */
-    if (pixels) {
-        src = (Uint8*)pixels;
-        dst = (Uint8*)SDL_PublicSurface->pixels;
-        for (row = 0; row < SDL_PublicSurface->h; ++row) {
-            SDL_memcpy(dst, src, length);
-            src += length;
-            dst += SDL_PublicSurface->pitch;
-        }
-        SDL_Flip(SDL_PublicSurface);
-        SDL_free(pixels);
-    }
-
-    /* We're done! */
     return 1;
 }
 
@@ -1497,9 +1391,11 @@ SDL_ResetCursor(void)
 
 struct private_yuvhwdata
 {
-    SDL_SW_YUVTexture *texture;
-    SDL_Surface *display;
-    Uint32 display_format;
+    Uint16 pitches[3];
+    Uint8 *planes[3];
+
+    SDL_Texture *texture;
+    Uint32 texture_format;
 };
 
 SDL_Overlay *
@@ -1507,7 +1403,6 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
 {
     SDL_Overlay *overlay;
     Uint32 texture_format;
-    SDL_SW_YUVTexture *texture;
 
     if ((display->flags & SDL_OPENGL) == SDL_OPENGL) {
         SDL_SetError("YUV overlays are not supported in OpenGL mode");
@@ -1555,16 +1450,6 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
         return NULL;
     }
 
-    texture = SDL_SW_CreateYUVTexture(texture_format, w, h);
-    if (!texture) {
-        SDL_free(overlay->hwdata);
-        SDL_free(overlay);
-        return NULL;
-    }
-    overlay->hwdata->texture = texture;
-    overlay->hwdata->display = NULL;
-    overlay->hwdata->display_format = SDL_PIXELFORMAT_UNKNOWN;
-
     overlay->format = format;
     overlay->w = w;
     overlay->h = h;
@@ -1573,8 +1458,31 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
     } else {
         overlay->planes = 1;
     }
-    overlay->pitches = texture->pitches;
-    overlay->pixels = texture->planes;
+    overlay->pitches = overlay->hwdata->pitches;
+    overlay->pixels = overlay->hwdata->planes;
+
+    switch (format) {
+    case SDL_YV12_OVERLAY:
+    case SDL_IYUV_OVERLAY:
+        overlay->pitches[0] = overlay->w;
+        overlay->pitches[1] = overlay->w / 2;
+        overlay->pitches[2] = overlay->w / 2;
+        break;
+    case SDL_YUY2_OVERLAY:
+    case SDL_UYVY_OVERLAY:
+    case SDL_YVYU_OVERLAY:
+        overlay->pitches[0] = overlay->w * 2;
+        break;
+    }
+
+    overlay->hwdata->texture =
+        SDL_CreateTexture(SDL_VideoRenderer, texture_format,
+                          SDL_TEXTUREACCESS_STREAMING, w, h);
+    if (!overlay->hwdata->texture) {
+        SDL_FreeYUVOverlay(overlay);
+        return NULL;
+    }
+    overlay->hwdata->texture_format = texture_format;
 
     return overlay;
 }
@@ -1582,7 +1490,6 @@ SDL_CreateYUVOverlay(int w, int h, Uint32 format, SDL_Surface * display)
 int
 SDL_LockYUVOverlay(SDL_Overlay * overlay)
 {
-    SDL_Rect rect;
     void *pixels;
     int pitch;
 
@@ -1590,16 +1497,9 @@ SDL_LockYUVOverlay(SDL_Overlay * overlay)
         SDL_SetError("Passed a NULL overlay");
         return -1;
     }
-
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = overlay->w;
-    rect.h = overlay->h;
-
-    if (SDL_SW_LockYUVTexture(overlay->hwdata->texture, &rect, &pixels, &pitch) < 0) {
+    if (SDL_LockTexture(overlay->hwdata->texture, NULL, &pixels, &pitch) < 0) {
         return -1;
     }
-
     overlay->pixels[0] = (Uint8 *) pixels;
     overlay->pitches[0] = pitch;
     switch (overlay->format) {
@@ -1626,54 +1526,20 @@ SDL_UnlockYUVOverlay(SDL_Overlay * overlay)
     if (!overlay) {
         return;
     }
-
-    SDL_SW_UnlockYUVTexture(overlay->hwdata->texture);
+    SDL_UnlockTexture(overlay->hwdata->texture);
 }
 
 int
 SDL_DisplayYUVOverlay(SDL_Overlay * overlay, SDL_Rect * dstrect)
 {
-    SDL_Surface *display;
-    SDL_Rect src_rect;
-    SDL_Rect dst_rect;
-    void *pixels;
-
     if (!overlay || !dstrect) {
         SDL_SetError("Passed a NULL overlay or dstrect");
         return -1;
     }
-
-    display = overlay->hwdata->display;
-    if (display != SDL_VideoSurface) {
-        overlay->hwdata->display = display = SDL_VideoSurface;
-        overlay->hwdata->display_format = SDL_MasksToPixelFormatEnum(
-                                                display->format->BitsPerPixel,
-                                                display->format->Rmask,
-                                                display->format->Gmask,
-                                                display->format->Bmask,
-                                                display->format->Amask);
-    }
-
-    src_rect.x = 0;
-    src_rect.y = 0;
-    src_rect.w = overlay->w;
-    src_rect.h = overlay->h;
-
-    if (!SDL_IntersectRect(&display->clip_rect, dstrect, &dst_rect)) {
-        return 0;
-    }
-     
-    pixels = (void *)((Uint8 *)display->pixels +
-                        dst_rect.y * display->pitch +
-                        dst_rect.x * display->format->BytesPerPixel);
-
-    if (SDL_SW_CopyYUVToRGB(overlay->hwdata->texture, &src_rect,
-                            overlay->hwdata->display_format,
-                            dst_rect.w, dst_rect.h,
-                            pixels, display->pitch) < 0) {
+    if (SDL_RenderCopy(SDL_VideoRenderer, overlay->hwdata->texture, NULL, dstrect) < 0) {
         return -1;
     }
-    SDL_UpdateWindowSurface(SDL_VideoWindow);
+    SDL_RenderPresent(SDL_VideoRenderer);
     return 0;
 }
 
@@ -1685,7 +1551,7 @@ SDL_FreeYUVOverlay(SDL_Overlay * overlay)
     }
     if (overlay->hwdata) {
         if (overlay->hwdata->texture) {
-            SDL_SW_DestroyYUVTexture(overlay->hwdata->texture);
+            SDL_DestroyTexture(overlay->hwdata->texture);
         }
         SDL_free(overlay->hwdata);
     }
@@ -1698,38 +1564,6 @@ SDL_GL_SwapBuffers(void)
     SDL_GL_SwapWindow(SDL_VideoWindow);
 }
 
-int
-SDL_SetGamma(float red, float green, float blue)
-{
-    Uint16 red_ramp[256];
-    Uint16 green_ramp[256];
-    Uint16 blue_ramp[256];
-
-    SDL_CalculateGammaRamp(red, red_ramp);
-    if (green == red) {
-        SDL_memcpy(green_ramp, red_ramp, sizeof(red_ramp));
-    } else {
-        SDL_CalculateGammaRamp(green, green_ramp);
-    }
-    if (blue == red) {
-        SDL_memcpy(blue_ramp, red_ramp, sizeof(red_ramp));
-    } else {
-        SDL_CalculateGammaRamp(blue, blue_ramp);
-    }
-    return SDL_SetWindowGammaRamp(SDL_VideoWindow, red_ramp, green_ramp, blue_ramp);
-}
-
-int
-SDL_SetGammaRamp(const Uint16 * red, const Uint16 * green, const Uint16 * blue)
-{
-    return SDL_SetWindowGammaRamp(SDL_VideoWindow, red, green, blue);
-}
-
-int
-SDL_GetGammaRamp(Uint16 * red, Uint16 * green, Uint16 * blue)
-{
-    return SDL_GetWindowGammaRamp(SDL_VideoWindow, red, green, blue);
-}
 
 int
 SDL_EnableKeyRepeat(int delay, int interval)

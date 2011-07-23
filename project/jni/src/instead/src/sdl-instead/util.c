@@ -1,6 +1,7 @@
 #include "externals.h"
 #include "config.h"
 #include "util.h"
+#include "idf.h"
 
 void tolow(char *p)
 {
@@ -35,11 +36,14 @@ err:
 
 char *getfilepath(const char *d, const char *n)
 {
-	int i = strlen(d) + strlen(n) + 3;
+	int i = ((d)?strlen(d):0) + ((n)?strlen(n):0) + 3;
 	char *p = malloc(i);
 	if (p) {
-		strcpy(p, d);
-		strcat(p, "/");
+		p[0] = 0;
+		if (d) {
+			strcpy(p, d);
+			strcat(p, "/");
+		}
 		strcat(p, n);
 		unix_path(p);
 	}
@@ -95,13 +99,13 @@ int process_cmd(char *n, char *v, struct parser *cmd_parser)
 	return -1;
 }
 
-static int fgetsesc(char *oline, size_t size, FILE *fp)
+static int fgetsesc(char *oline, size_t size, char *(*getl)(void *p, char *s, int size), void *fp)
 {
 	int nr = 0;
 	char line[4096];
 	*oline = 0;
 	*line = 0;
-	while (fgets(line, sizeof(line), fp)) {
+	while (getl(fp, line, sizeof(line))) {
 		int i;
 		nr ++;
 		i = strcspn(line, "\n\r");
@@ -149,17 +153,17 @@ static void comments_zap(char *p)
 		*l = 0;
 }
 
-int parse_ini(const char *path, struct parser *cmd_parser)
+int parse_all(void *fp, char *(*getl)(void *p, char *s, int size), const char *path, struct parser *cmd_parser)
 {
 	int nr;
 	int rc = 0;
 	int line_nr = 1;
-	FILE *fp;
+
 	char line[4096];
-	fp = fopen(path, "rb");
 	if (!fp)
 		return -1;
-	while ((nr = fgetsesc(line, sizeof(line), fp))) {
+
+	while ((nr = fgetsesc(line, sizeof(line), getl, fp))) {
 		char *p = line;
 		char *val;
 		int len;
@@ -183,8 +187,36 @@ int parse_ini(const char *path, struct parser *cmd_parser)
 			fprintf(stderr, "Can't process cmd '%s' on line %d in '%s': %s\n", p, line_nr - nr, path, strerror(errno));
 		}
 	}
+	return rc;
+}
+
+static char *file_gets(void *fd, char *s, int size)
+{
+	return fgets(s, size, (FILE *)fd);
+}
+
+static char *idff_gets(void *fd, char *s, int size)
+{
+	return idf_gets((idff_t)fd, s, size);
+}
+
+int parse_ini(const char *path, struct parser *cmd_parser)
+{
+	int rc = 0;
+	FILE *fp;
+	fp = fopen(path, "rb");
+	if (!fp)
+		return -1;
+	rc = parse_all(fp, file_gets, path, cmd_parser);
 	fclose(fp);
 	return rc;
+}
+
+int parse_idff(idff_t idff, const char *path, struct parser *cmd_parser)
+{
+	if (!idff)
+		return -1;
+	return parse_all(idff, idff_gets, path, cmd_parser);
 }
 
 int parse_string(const char *v, void *data)
@@ -322,7 +354,10 @@ int parse_full_path(const char *v, void *data)
 	char cwd[PATH_MAX];
 	char **p = ((char **)data);
 
-	if (theme_relative || !strncmp(v, "blank:", 6) || !strncmp(v, "box:", 4)) /* hack for special files*/
+	if (theme_relative || 
+		!strncmp(v, "blank:", 6) || 
+		!strncmp(v, "box:", 4) ||
+		!strncmp(v, "spr:", 4)) /* hack for special files*/
 		return parse_path(v, data);
 
 	if (*p)
@@ -355,23 +390,28 @@ void unix_path(char *path)
 	return;
 }
 
-char *lookup_tag(const char *fname, const char *tag, const char *comm)
+static char *lookup_tag_all(const char *tag, const char *comm, char *(*getl)(void *p, char *s, int size), void *fp)
 {
 	int brk = 0;
 	char *l; char line[1024];
+	while ((l = getl(fp, line, sizeof(line))) && !brk) {
+		l = parse_tag(l, tag, comm, &brk);
+		if (l)
+			return l;
+	}
+	return NULL;
+
+}
+
+char *lookup_tag(const char *fname, const char *tag, const char *comm)
+{
+	char *l;
 	FILE *fd = fopen(fname, "rb");
 	if (!fd)
 		return NULL;
-
-	while ((l = fgets(line, sizeof(line), fd)) && !brk) {
-		l = parse_tag(l, tag, comm, &brk);
-		if (l) {
-			fclose(fd);
-			return l;
-		}
-	}
+	l = lookup_tag_all(tag, comm, file_gets, fd);
 	fclose(fd);
-	return NULL;
+	return l;
 }
 
 char *lookup_lang_tag(const char *fname, const char *tag, const char *comm)
@@ -382,6 +422,21 @@ char *lookup_lang_tag(const char *fname, const char *tag, const char *comm)
 	l = lookup_tag(fname, lang_tag, comm);
 	if (!l) 
 		l = lookup_tag(fname, tag, comm);
+	return l;
+}
+
+char *lookup_lang_tag_idf(idff_t idf, const char *tag, const char *comm)
+{
+	char lang_tag[1024];
+	char *l;
+	if (!idf)
+		return NULL;
+	snprintf(lang_tag, sizeof(lang_tag), "%s(%s)", tag, opt_lang);
+	l = lookup_tag_all(lang_tag, comm, idff_gets, idf);
+	if (!l) {
+		idf_seek(idf, 0, SEEK_SET);
+		l = lookup_tag_all(tag, comm, idff_gets, idf);
+	}
 	return l;
 }
 

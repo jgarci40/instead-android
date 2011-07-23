@@ -1,9 +1,6 @@
 package com.silentlexx.instead;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +54,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private Button basic_btn;
 	private Button alter_btn;
 	private Button btn_sync;
+	private boolean fscan = false;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -225,7 +223,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 			if (gl.getFlag(index[item_index]) == GameList.INSTALLED) {
 				menu.add(0, v.getId(), 0, getString(R.string.menustart));
-
+			//	if(	(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index[item_index])))).exists()){
+					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
+			//	}
 				menu.add(0, v.getId(), 0, getString(R.string.menudel));
 			}
 
@@ -248,6 +248,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
 		if (item.getTitle() == getString(R.string.menustart)) {
+			startApp();
+		} else if (item.getTitle() == getString(R.string.menunewstart)) {
+			delSaves();
 			startApp();
 		} else if (item.getTitle() == getString(R.string.menudel)) {
 			gameDelete();
@@ -400,8 +403,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	public void listUpdate() {
 
-		gl = new GameList(this, getGameListName(listNo));
-
+		gl = new GameList(this, getGameListName(listNo),fscan);
+		fscan =false;
 		List<String> names = new ArrayList<String>();
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
@@ -495,7 +498,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setMessage(getString(R.string.init));
 
 		ShowDialog();
-
+		fscan = true;
 		new XmlDownloader(this, dialog, listNo);
 	}
 
@@ -508,6 +511,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setCancelable(true);
 
 		dwn = true;
+		fscan = true;
 		downloader = new GameDownloader(this, gl.getInf(GameList.URL,
 				index[item_index]),
 				gl.getInf(GameList.NAME, index[item_index]), dialog);
@@ -571,6 +575,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	void Delete() {
 		Globals.delete(new File(Globals.getOutFilePath(Globals.GameDir
 				+ gl.getInf(GameList.NAME, index[item_index]))));
+		fscan = true;
 		listUpdate();
 		Toast.makeText(
 				this,
@@ -648,6 +653,10 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			startActivity(myIntent);
 		}
 	}
+	
+	private void delSaves() {
+		(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index[item_index])))).delete();
+		}
 
 	@Override
 	protected void onPause() {
@@ -719,7 +728,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	protected void checkXml() {
-		if (!isFile(getGameListName(listNo))) {
+		if (!(new File(getFilesDir()+"/"+getGameListName(listNo)).exists())) {
 			listDownload();
 		} else {
 			listUpdate();
@@ -742,34 +751,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	private boolean isFile(String s) {
-		String path = Globals.getOutFilePath(s);
-		InputStream checkFile = null;
-		try {
-			checkFile = new FileInputStream(path);
-		} catch (FileNotFoundException e) {
-		} catch (SecurityException e) {
-		}
-		;
-		if (checkFile != null) {
-			checkFile = null;
-			return true;
-		}
-		checkFile = null;
-		return false;
+		return (new File(Globals.getOutFilePath(s))).exists();
 	}
 
 	public boolean checkInstall() {
-		String path = Globals.getOutFilePath(Globals.DataFlag);
-		@SuppressWarnings("unused")
-		InputStream checkFile = null;
-		try {
-			checkFile = new FileInputStream(path);
-		} catch (FileNotFoundException e) {
-		} catch (SecurityException e) {
-		}
-		;
-		checkFile = null;
-		return true;
+		return isFile(Globals.DataFlag);
 	}
 
 	private class ListItem {

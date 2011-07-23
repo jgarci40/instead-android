@@ -1,22 +1,23 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
 
@@ -69,16 +70,6 @@ do { \
     setpixel; \
 } while (0)
 
-#define DRAW_SETPIXEL_MOD(getpixel, setpixel) \
-do { \
-    unsigned sr, sg, sb, sa; sa; \
-    getpixel; \
-    sr = DRAW_MUL(sr, r); \
-    sg = DRAW_MUL(sg, g); \
-    sb = DRAW_MUL(sb, b); \
-    setpixel; \
-} while (0)
-
 #define DRAW_SETPIXELXY(x, y, type, bpp, op) \
 do { \
     type *pixel = (type *)((Uint8 *)dst->pixels + (y) * dst->pitch \
@@ -101,10 +92,6 @@ do { \
     DRAW_SETPIXEL_ADD(RGB_FROM_RGB555(*pixel, sr, sg, sb), \
                       RGB555_FROM_RGB(*pixel, sr, sg, sb))
 
-#define DRAW_SETPIXEL_MOD_RGB555 \
-    DRAW_SETPIXEL_MOD(RGB_FROM_RGB555(*pixel, sr, sg, sb), \
-                      RGB555_FROM_RGB(*pixel, sr, sg, sb))
-
 #define DRAW_SETPIXELXY_RGB555(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_RGB555)
 
@@ -113,9 +100,6 @@ do { \
 
 #define DRAW_SETPIXELXY_ADD_RGB555(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_ADD_RGB555)
-
-#define DRAW_SETPIXELXY_MOD_RGB555(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MOD_RGB555)
 
 /*
  * Define draw operators for RGB565
@@ -132,10 +116,6 @@ do { \
     DRAW_SETPIXEL_ADD(RGB_FROM_RGB565(*pixel, sr, sg, sb), \
                       RGB565_FROM_RGB(*pixel, sr, sg, sb))
 
-#define DRAW_SETPIXEL_MOD_RGB565 \
-    DRAW_SETPIXEL_MOD(RGB_FROM_RGB565(*pixel, sr, sg, sb), \
-                      RGB565_FROM_RGB(*pixel, sr, sg, sb))
-
 #define DRAW_SETPIXELXY_RGB565(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_RGB565)
 
@@ -144,9 +124,6 @@ do { \
 
 #define DRAW_SETPIXELXY_ADD_RGB565(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_ADD_RGB565)
-
-#define DRAW_SETPIXELXY_MOD_RGB565(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MOD_RGB565)
 
 /*
  * Define draw operators for RGB888
@@ -163,10 +140,6 @@ do { \
     DRAW_SETPIXEL_ADD(RGB_FROM_RGB888(*pixel, sr, sg, sb), \
                       RGB888_FROM_RGB(*pixel, sr, sg, sb))
 
-#define DRAW_SETPIXEL_MOD_RGB888 \
-    DRAW_SETPIXEL_MOD(RGB_FROM_RGB888(*pixel, sr, sg, sb), \
-                      RGB888_FROM_RGB(*pixel, sr, sg, sb))
-
 #define DRAW_SETPIXELXY_RGB888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_RGB888)
 
@@ -175,9 +148,6 @@ do { \
 
 #define DRAW_SETPIXELXY_ADD_RGB888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_ADD_RGB888)
-
-#define DRAW_SETPIXELXY_MOD_RGB888(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_RGB888)
 
 /*
  * Define draw operators for ARGB8888
@@ -194,10 +164,6 @@ do { \
     DRAW_SETPIXEL_ADD(RGBA_FROM_ARGB8888(*pixel, sr, sg, sb, sa), \
                       ARGB8888_FROM_RGBA(*pixel, sr, sg, sb, sa))
 
-#define DRAW_SETPIXEL_MOD_ARGB8888 \
-    DRAW_SETPIXEL_MOD(RGBA_FROM_ARGB8888(*pixel, sr, sg, sb, sa), \
-                      ARGB8888_FROM_RGBA(*pixel, sr, sg, sb, sa))
-
 #define DRAW_SETPIXELXY_ARGB8888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_ARGB8888)
 
@@ -206,9 +172,6 @@ do { \
 
 #define DRAW_SETPIXELXY_ADD_ARGB8888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_ADD_ARGB8888)
-
-#define DRAW_SETPIXELXY_MOD_ARGB8888(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_ARGB8888)
 
 /*
  * Define draw operators for general RGB
@@ -223,10 +186,6 @@ do { \
 
 #define DRAW_SETPIXEL_ADD_RGB \
     DRAW_SETPIXEL_ADD(RGB_FROM_PIXEL(*pixel, fmt, sr, sg, sb), \
-                      PIXEL_FROM_RGB(*pixel, fmt, sr, sg, sb))
-
-#define DRAW_SETPIXEL_MOD_RGB \
-    DRAW_SETPIXEL_MOD(RGB_FROM_PIXEL(*pixel, fmt, sr, sg, sb), \
                       PIXEL_FROM_RGB(*pixel, fmt, sr, sg, sb))
 
 #define DRAW_SETPIXELXY2_RGB(x, y) \
@@ -247,12 +206,6 @@ do { \
 #define DRAW_SETPIXELXY4_ADD_RGB(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_ADD_RGB)
 
-#define DRAW_SETPIXELXY2_MOD_RGB(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MOD_RGB)
-
-#define DRAW_SETPIXELXY4_MOD_RGB(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_RGB)
-
 
 /*
  * Define draw operators for general RGBA
@@ -269,10 +222,6 @@ do { \
     DRAW_SETPIXEL_ADD(RGBA_FROM_PIXEL(*pixel, fmt, sr, sg, sb, sa), \
                       PIXEL_FROM_RGBA(*pixel, fmt, sr, sg, sb, sa))
 
-#define DRAW_SETPIXEL_MOD_RGBA \
-    DRAW_SETPIXEL_MOD(RGBA_FROM_PIXEL(*pixel, fmt, sr, sg, sb, sa), \
-                      PIXEL_FROM_RGBA(*pixel, fmt, sr, sg, sb, sa))
-
 #define DRAW_SETPIXELXY4_RGBA(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_RGBA)
 
@@ -281,9 +230,6 @@ do { \
 
 #define DRAW_SETPIXELXY4_ADD_RGBA(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_ADD_RGBA)
-
-#define DRAW_SETPIXELXY4_MOD_RGBA(x, y) \
-    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_RGBA)
 
 /*
  * Define line drawing macro

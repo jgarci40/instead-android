@@ -26,6 +26,7 @@ typedef struct {
 	int r;
 	int g;
 	int b;
+	int a;
 } color_t;
 
 #define ALIGN_LEFT 	1
@@ -55,6 +56,7 @@ extern void 	gfx_done(void);
 
 extern int	gfx_parse_color (const char *spec, color_t *def);
 extern void	gfx_flip(void);
+extern cache_t	gfx_image_cache(void);
 extern img_t	gfx_screen(img_t nscreen);
 extern void 	gfx_bg(color_t col);
 extern void 	gfx_noclip(void);
@@ -72,6 +74,7 @@ extern int	gfx_prev_mode(int *w, int *h);
 extern void	gfx_update(int x, int y, int w, int h);
 extern void	gfx_video_done(void);
 extern void	gfx_clear(int x, int y, int w, int h);
+extern void	gfx_copy_from(img_t p, int x, int y, int width, int height, img_t to, int xx, int yy);
 extern void	gfx_draw(img_t pixmap, int x, int y);
 extern void	gfx_draw_wh(img_t p, int x, int y, int w, int h);
 extern img_t	gfx_grab_screen(int x, int y, int w, int h);
@@ -82,22 +85,29 @@ extern int	gfx_img_w(img_t pixmap);
 extern int	gfx_img_h(img_t pixmap);
 extern img_t	gfx_combine(img_t src, img_t dst);
 extern void	gfx_set_alpha(img_t src, int alpha);
+extern void	gfx_unset_alpha(img_t src);
+
 extern img_t	gfx_alpha_img(img_t src, int alpha);
 extern img_t	gfx_display_alpha(img_t src);
 extern img_t	gfx_scale(img_t src, float xscale, float yscale);
+extern img_t	gfx_rotate(img_t src, float angle);
+
 extern void	gfx_draw_bg(img_t p, int x, int y, int width, int height);
-extern void	gfx_draw_from(img_t p, int x, int y, int xx, int yy, int width, int height);
+extern void	gfx_draw_from(img_t p, int x, int y, int width, int height, img_t to, int xx, int yy);
 extern void	gfx_cursor(int *xp, int *yp);
 extern void	gfx_warp_cursor(int x, int y);
 extern void	gfx_change_screen(img_t src, int steps);
 extern int	gfx_fading(void);
 extern void	gfx_img_fill(img_t img, int x, int y, int w, int h, color_t col);
 extern void	gfx_fill(int x, int y, int w, int h, color_t col);
+extern int	gfx_get_pixel(img_t src, int x, int y,  color_t *color);
+extern int	gfx_set_pixel(img_t src, int x, int y,  color_t color);
 
 extern fnt_t 	fnt_load(const char *fname, int size);
 extern void 	fnt_free(fnt_t);
 extern int		fnt_height(fnt_t fn);
 extern void 	fnt_style(fnt_t fn, int style);
+extern img_t	fnt_render(fnt_t fn, const char *p, color_t col);
 
 extern void 	txt_draw(fnt_t fnt, const char *txt, int x, int y, color_t col);
 extern void 	txt_size(fnt_t fnt, const char *txt, int *w, int *h);
@@ -174,5 +184,7 @@ extern void	gfx_del_timer(gtimer_t han);
 extern gtimer_t gfx_add_timer(int delay, int (*fn)(int, void*), void *aux);
 extern void	gfx_update_gif(img_t img);
 extern void 	gfx_dispose_gif(img_t p);
+extern unsigned long gfx_ticks(void);
+
 #endif
 

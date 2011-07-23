@@ -168,6 +168,12 @@ function visited(w)
 	return w.__visited
 end
 
+function visits(w)
+	local n = visited(w)
+	if not n then n = 0 end
+	return n
+end
+
 iface.fmt = function(self, cmd, st, moved, r, av, objs, pv) -- st -- changed state (main win), move -- loc changed
 	local l
 	if st then
@@ -213,10 +219,17 @@ end)
 
 player  = stead.inherit(player, function(v)
 	v.look = function(s)
+		if not stead.started then
+			game:start()
+			stead.started = true
+		end
 		if game._time == 0 then
 			return stead.goto(here(), false, false, true);
 		end
 		NEED_SCENE = true
+		if stead.api_version >= "1.3.5" then
+			return true -- force action
+		end
 	end
 	return v
 end)

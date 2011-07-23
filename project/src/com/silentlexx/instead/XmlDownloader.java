@@ -106,8 +106,9 @@ class XmlDownloader extends Thread {
 			return;
 		}
 
-		(new File(Globals.getOutFilePath(gameListFileName))).delete();
-
+		//(new File(Globals.getOutFilePath(gameListFileName))).delete();
+		(new File(Parent.getFilesDir()+"/"+gameListFileName)).delete();
+			
 		try {
 			if (!Parent.onpause)
 				Status.setMessage(Parent.getString(R.string.downdata) + " "
@@ -144,7 +145,7 @@ class XmlDownloader extends Thread {
 
 	private void writeFile(String s) {
 
-		String path = Globals.getOutFilePath(gameListFileName);
+		String path = Parent.getFilesDir()+"/"+gameListFileName;
 
 		OutputStream out = null;
 

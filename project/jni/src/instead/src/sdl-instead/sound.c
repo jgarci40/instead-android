@@ -3,6 +3,7 @@
 
 #include <SDL.h>
 #include <SDL_mixer.h>
+#include "sdl_idf.h"
 
 #ifdef S60
 int audio_rate = 11025;
@@ -103,6 +104,7 @@ int snd_init(int hz)
 		return -1;
 	}
 	sound_on = 1;
+	Mix_ChannelFinished(game_channel_finished);
 	return 0;
 }
 
@@ -116,14 +118,17 @@ int snd_volume_mus(int vol)
 
 wav_t	snd_load_wav(const char *fname)
 {
+	SDL_RWops *rw;
 	wav_t r;
 	if (!sound_on)
 		return NULL;
-	if (!fname)
+	if (!fname || !*fname)
 		return NULL;
-	r = (wav_t)Mix_LoadWAV(fname);
-	if (!r)
+	rw = RWFromIdf(game_idf, fname);
+	if (!rw || !(r = (wav_t)Mix_LoadWAV_RW(rw, 1))) {
 		fprintf(stderr,"Can't load '%s'.\n", fname);
+		return NULL;
+	}
 	return r;
 }
 
@@ -151,7 +156,7 @@ mus_t snd_load_mus(const char *fname)
 	mus = malloc(sizeof(struct _mus_t));
 	if (!mus)
 		return NULL;
-	mus->rw = SDL_RWFromFile(fname, "rb");
+	mus->rw = RWFromIdf(game_idf, fname);
 	if (!mus->rw) 
 		goto err;
 	mus->mus = Mix_LoadMUS_RW(mus->rw);
@@ -233,6 +238,15 @@ int snd_playing(int channel)
 	return Mix_Playing(channel);
 }
 
+int snd_panning(int channel, int left, int right)
+{
+	if (channel >= MIX_CHANNELS)
+		channel %= MIX_CHANNELS;
+	if (channel < 0)
+		channel = -1;	
+	return Mix_SetPanning(channel, left, right);
+}
+
 void snd_free_mus(mus_t mus)
 {
 	if (!sound_on)
@@ -270,11 +284,13 @@ void snd_done(void)
 {
 	if (!sound_on)
 		return;
-	if (timer_id)
-		
+	Mix_ChannelFinished(game_channel_finished);
+	if (timer_id) {
+		SDL_RemoveTimer(timer_id);
+		timer_id = NULL_TIMER;
+	}
 	Mix_HaltChannel(-1);
 	Mix_HaltMusic();
-	timer_id = NULL_TIMER;
 	if (mus)
 		snd_free_mus(mus);
 	mus = NULL;

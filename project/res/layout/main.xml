@@ -1,11 +1,11 @@
 <LinearLayout android:id="@+id/Linear01"
 	android:layout_width="fill_parent" android:layout_height="fill_parent"
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:orientation="vertical">
+	android:orientation="vertical" android:background="@drawable/wallpaper">
 
 
 	<ScrollView android:id="@+id/ScrollView01"
-		android:layout_width="fill_parent" android:layout_height="fill_parent" android:layout_marginBottom="20dip" android:background="#000000">
+		android:layout_width="fill_parent" android:layout_height="fill_parent" android:layout_marginBottom="20dip">
 		<LinearLayout android:id="@+id/llb" android:layout_width="fill_parent"
 			xmlns:android="http://schemas.android.com/apk/res/android"
 			android:orientation="vertical" android:gravity="center"
@@ -32,7 +32,7 @@
 
 
 			<TableLayout android:id="@+id/Linear03"
-				android:layout_width="fill_parent" android:layout_height="fill_parent" android:orientation="horizontal" android:background="#000000">
+				android:layout_width="fill_parent" android:layout_height="fill_parent" android:orientation="horizontal">
 
 				<TableRow android:gravity="center">
 					<Button android:text="@string/run" android:visibility="visible"
@@ -61,7 +61,7 @@
 
 
 </ScrollView>
-	<LinearLayout android:layout_height="wrap_content" android:layout_marginTop="-20dip" android:layout_width="fill_parent" android:gravity="center" android:id="@+id/LinearLayout06" android:background="#000000">
+	<LinearLayout android:layout_height="wrap_content" android:layout_marginTop="-20dip" android:layout_width="fill_parent" android:gravity="center" android:id="@+id/LinearLayout06">
 	<TextView android:id="@+id/TextView01" android:layout_width="wrap_content" android:textSize="12sp" android:layout_height="fill_parent" android:gravity="center" android:text="@string/by" android:layout_marginRight="4dip"></TextView>
 	<TextView android:id="@+id/email" android:layout_width="wrap_content" android:textSize="12sp" android:layout_height="fill_parent" android:gravity="center" android:text="@string/email" android:textColor="#3377BB"></TextView>
 

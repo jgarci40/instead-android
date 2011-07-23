@@ -1,26 +1,25 @@
 /*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2011 Sam Lantinga <slouken@libsdl.org>
+    SDL - Simple DirectMedia Layer
+    Copyright (C) 1997-2010 Sam Lantinga
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Sam Lantinga
+    slouken@libsdl.org
 */
 #include "SDL_config.h"
-
-#if !SDL_RENDER_DISABLED
 
 #include "SDL_draw.h"
 #include "SDL_blendfillrect.h"
@@ -38,9 +37,6 @@ SDL_BlendFillRect_RGB555(SDL_Surface * dst, const SDL_Rect * rect,
         break;
     case SDL_BLENDMODE_ADD:
         FILLRECT(Uint16, DRAW_SETPIXEL_ADD_RGB555);
-        break;
-    case SDL_BLENDMODE_MOD:
-        FILLRECT(Uint16, DRAW_SETPIXEL_MOD_RGB555);
         break;
     default:
         FILLRECT(Uint16, DRAW_SETPIXEL_RGB555);
@@ -62,9 +58,6 @@ SDL_BlendFillRect_RGB565(SDL_Surface * dst, const SDL_Rect * rect,
     case SDL_BLENDMODE_ADD:
         FILLRECT(Uint16, DRAW_SETPIXEL_ADD_RGB565);
         break;
-    case SDL_BLENDMODE_MOD:
-        FILLRECT(Uint16, DRAW_SETPIXEL_MOD_RGB565);
-        break;
     default:
         FILLRECT(Uint16, DRAW_SETPIXEL_RGB565);
         break;
@@ -85,9 +78,6 @@ SDL_BlendFillRect_RGB888(SDL_Surface * dst, const SDL_Rect * rect,
     case SDL_BLENDMODE_ADD:
         FILLRECT(Uint32, DRAW_SETPIXEL_ADD_RGB888);
         break;
-    case SDL_BLENDMODE_MOD:
-        FILLRECT(Uint32, DRAW_SETPIXEL_MOD_RGB888);
-        break;
     default:
         FILLRECT(Uint32, DRAW_SETPIXEL_RGB888);
         break;
@@ -107,9 +97,6 @@ SDL_BlendFillRect_ARGB8888(SDL_Surface * dst, const SDL_Rect * rect,
         break;
     case SDL_BLENDMODE_ADD:
         FILLRECT(Uint32, DRAW_SETPIXEL_ADD_ARGB8888);
-        break;
-    case SDL_BLENDMODE_MOD:
-        FILLRECT(Uint32, DRAW_SETPIXEL_MOD_ARGB8888);
         break;
     default:
         FILLRECT(Uint32, DRAW_SETPIXEL_ARGB8888);
@@ -134,9 +121,6 @@ SDL_BlendFillRect_RGB(SDL_Surface * dst, const SDL_Rect * rect,
         case SDL_BLENDMODE_ADD:
             FILLRECT(Uint16, DRAW_SETPIXEL_ADD_RGB);
             break;
-        case SDL_BLENDMODE_MOD:
-            FILLRECT(Uint16, DRAW_SETPIXEL_MOD_RGB);
-            break;
         default:
             FILLRECT(Uint16, DRAW_SETPIXEL_RGB);
             break;
@@ -149,9 +133,6 @@ SDL_BlendFillRect_RGB(SDL_Surface * dst, const SDL_Rect * rect,
             break;
         case SDL_BLENDMODE_ADD:
             FILLRECT(Uint32, DRAW_SETPIXEL_ADD_RGB);
-            break;
-        case SDL_BLENDMODE_MOD:
-            FILLRECT(Uint32, DRAW_SETPIXEL_MOD_RGB);
             break;
         default:
             FILLRECT(Uint32, DRAW_SETPIXEL_RGB);
@@ -179,9 +160,6 @@ SDL_BlendFillRect_RGBA(SDL_Surface * dst, const SDL_Rect * rect,
             break;
         case SDL_BLENDMODE_ADD:
             FILLRECT(Uint32, DRAW_SETPIXEL_ADD_RGBA);
-            break;
-        case SDL_BLENDMODE_MOD:
-            FILLRECT(Uint32, DRAW_SETPIXEL_MOD_RGBA);
             break;
         default:
             FILLRECT(Uint32, DRAW_SETPIXEL_RGBA);
@@ -264,10 +242,10 @@ SDL_BlendFillRect(SDL_Surface * dst, const SDL_Rect * rect,
 }
 
 int
-SDL_BlendFillRects(SDL_Surface * dst, const SDL_Rect * rects, int count,
+SDL_BlendFillRects(SDL_Surface * dst, const SDL_Rect ** rects, int count,
                    SDL_BlendMode blendMode, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
-    SDL_Rect rect;
+    SDL_Rect clipped;
     int i;
     int (*func)(SDL_Surface * dst, const SDL_Rect * rect,
                 SDL_BlendMode blendMode, Uint8 r, Uint8 g, Uint8 b, Uint8 a) = NULL;
@@ -328,15 +306,22 @@ SDL_BlendFillRects(SDL_Surface * dst, const SDL_Rect * rects, int count,
     }
 
     for (i = 0; i < count; ++i) {
-        /* Perform clipping */
-        if (!SDL_IntersectRect(&rects[i], &dst->clip_rect, &rect)) {
-            continue;
+        const SDL_Rect * rect = rects[i];
+
+        /* If 'rect' == NULL, then fill the whole surface */
+        if (rect) {
+            /* Perform clipping */
+            if (!SDL_IntersectRect(rect, &dst->clip_rect, &clipped)) {
+                continue;
+            }
+            rect = &clipped;
+        } else {
+            rect = &dst->clip_rect;
         }
-        status = func(dst, &rect, blendMode, r, g, b, a);
+
+        status = func(dst, rect, blendMode, r, g, b, a);
     }
     return status;
 }
-
-#endif /* !SDL_RENDER_DISABLED */
 
 /* vi: set ts=4 sw=4 expandtab: */

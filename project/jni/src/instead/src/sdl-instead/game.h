@@ -1,5 +1,9 @@
 #ifndef __GAME_H__
 #define __GAME_H__
+#include <SDL_mixer.h>
+#include "idf.h"
+
+#define SND_CHANNELS MIX_CHANNELS
 
 #ifndef GAMES_PATH
 #define GAMES_PATH "./games"
@@ -78,6 +82,16 @@ extern char	*open_file_dialog(void);
 
 extern int	game_from_disk(void);
 
+extern int	game_pict_modify(img_t p);
+extern int game_pict_coord(int *x, int *y, int *w, int *h);
+extern void menu_toggle(void);
+extern void game_channel_finished(int channel);
+
+extern int sound_load(const char *fname);
+extern void sound_unload(const char *fname);
+extern void sounds_free(void);
+extern const char *sound_channel(int i);
+
 #define CURSOR_CLEAR -1
 #define CURSOR_OFF    0
 #define CURSOR_ON     1
@@ -89,9 +103,10 @@ struct game {
 	char *path;
 	char *name;
 	char *dir;
+	int idf;
 };
 
 extern struct	game *games;
 extern int	games_nr;
-
+extern idf_t	game_idf;
 #endif

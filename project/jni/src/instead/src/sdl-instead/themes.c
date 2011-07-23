@@ -15,6 +15,8 @@ static int parse_gfx_mode(const char *v, void *data)
 		*i = GFX_MODE_EMBEDDED;
 	else if (!strcmp(v, "float"))
 		*i = GFX_MODE_FLOAT;	
+	else if (!strcmp(v, "direct"))
+		*i = GFX_MODE_DIRECT;	
 	else
 		return -1;
 	return 0;	
@@ -32,6 +34,9 @@ static int out_gfx_mode(const void *v, char **out)
 		break;
 	case GFX_MODE_FLOAT:
 		o = strdup("float");
+		break;
+	case GFX_MODE_DIRECT:
+		o = strdup("direct");
 		break;
 	default:
 		o = strdup("");
@@ -129,6 +134,7 @@ static int parse_include(const char *v, void *data)
 struct parser cmd_parser[] = {
 	{ "scr.w", parse_int, &game_theme.w },
 	{ "scr.h", parse_int, &game_theme.h },
+	{ "scr.gfx.scalable", parse_int, &game_theme.gfx_scalable },
 	{ "scr.col.bg", parse_color, &game_theme.bgcol },
 	{ "scr.gfx.bg", parse_full_path, &game_theme.bg_name, CHANGED_BG },
 	{ "scr.gfx.cursor.normal", parse_full_path, &game_theme.cursor_name, CHANGED_CURSOR },
@@ -254,6 +260,7 @@ struct game_theme game_theme = {
 	.scale = 1.0f,
 	.w = 800,
 	.h = 480,
+	.gfx_scalable = 1,
 	.bg_name = NULL,
 	.bg = NULL,
 	.use_name = NULL,
@@ -364,6 +371,10 @@ int theme_img_scale(img_t *p)
 	float v = game_theme.scale;
 	if (!p || !*p || v == 1.0f)
 		return 0;
+
+	if (!cache_have(gfx_image_cache(), *p))
+		return 0; /* do not scale sprites! */
+
 	pic = gfx_scale(*p, v, v); 
 	if (!pic)
 		return -1;
@@ -551,21 +562,22 @@ int game_theme_optimize(void)
 {
 /* todo: check errors */
 	struct game_theme *t = &game_theme;
-	if (t->bg)
+
+	if (t->bg && cache_have(gfx_image_cache(), t->bg))
 		t->bg = gfx_display_alpha(t->bg);
-	if (t->a_up)
+	if (t->a_up && cache_have(gfx_image_cache(), t->a_up))
 		t->a_up = gfx_display_alpha(t->a_up);
-	if (t->a_down)
+	if (t->a_down && cache_have(gfx_image_cache(), t->a_down))
 		t->a_down = gfx_display_alpha(t->a_down);
-	if (t->inv_a_up)
+	if (t->inv_a_up && cache_have(gfx_image_cache(), t->inv_a_up))
 		t->inv_a_up = gfx_display_alpha(t->inv_a_up);
-	if (t->inv_a_down)
+	if (t->inv_a_down && cache_have(gfx_image_cache(), t->inv_a_down))
 		t->inv_a_down = gfx_display_alpha(t->inv_a_down);
-	if (t->use)
+	if (t->use && cache_have(gfx_image_cache(), t->use))
 		t->use = gfx_display_alpha(t->use);
-	if (t->cursor)
+	if (t->cursor && cache_have(gfx_image_cache(), t->cursor))
 		t->cursor = gfx_display_alpha(t->cursor);
-	if (t->menu_button)
+	if (t->menu_button && cache_have(gfx_image_cache(), t->menu_button))
 		t->menu_button = gfx_display_alpha(t->menu_button);
 	return 0;
 }
@@ -573,7 +585,7 @@ int game_theme_optimize(void)
 static int game_theme_update_data(void)
 {
 	struct game_theme *t = &game_theme;
-
+	int idf = idf_only(game_idf, 0);
 	if (t->font_name && (t->changed & CHANGED_FONT)) {
 		fnt_free(t->font);
 		if (!(t->font = fnt_load(t->font_name, FONT_SZ(t->font_size))))
@@ -587,8 +599,14 @@ static int game_theme_update_data(void)
 	}
 
 	if (t->menu_font_name && (t->changed & CHANGED_MFONT)) {
+		int m = FONT_SZ(t->inv_font_size);
+		if (MAX_MENU_LINES * m * game_theme.menu_font_height > game_theme.h)
+			m = game_theme.h / MAX_MENU_LINES / game_theme.menu_font_height;
+		else if (m < t->menu_font_size)
+			m = t->menu_font_size;
+//		fprintf(stderr, "%d %d > %d? %d", (int)FONT_SZ(t->inv_font_size), (int)FONT_SZ(t->inv_font_size) * MAX_MENU_LINES, game_theme.h, m);
 		fnt_free(t->menu_font);
-		if (!(t->menu_font = fnt_load(t->menu_font_name, t->menu_font_size))) /* do not scale menu!!! */
+		if (!(t->menu_font = fnt_load(t->menu_font_name, m))) /* do not scale menu!!! */
 			goto err;
 	}
 
@@ -671,8 +689,10 @@ static int game_theme_update_data(void)
 		fprintf(stderr,"Can't init theme. Not all required elements are defined.\n");
 		goto err;
 	}
+	idf_only(game_idf, idf);
 	return 0;
 err:
+	idf_only(game_idf, idf);
 	t->changed = 0;
 	return -1;
 }
@@ -694,6 +714,7 @@ int game_theme_update(void)
 
 int game_theme_init(void)
 {
+	color_t col = { .r = 0, .g = 0, .b = 0 };
 	int w  = opt_mode[0];
 	int h  = opt_mode[1];
 
@@ -702,14 +723,17 @@ int game_theme_init(void)
 		w = opt_mode[0];
 		h = opt_mode[1];
 	}
-
+	if (!SCALABLE_THEME) { /* no scalable? TODO: message? */
+		w = game_theme.w;
+		h = game_theme.h;
+	}
 	game_theme_scale(w, h);
 
 	if (gfx_set_mode(game_theme.w, game_theme.h, opt_fs)) {
 		opt_mode[0] = opt_mode[1] = -1; opt_fs = 0; /* safe options */
 		return -1;
 	}
-
+	gfx_fill(0, 0, game_theme.w, game_theme.h, col);
 	if (game_theme_update_data()) {
 		fprintf(stderr, "Can not init theme!\n");
 		game_theme_free();
@@ -721,7 +745,20 @@ int game_theme_init(void)
 
 static int theme_parse(const char *path)
 {
-	if (parse_ini(path, cmd_parser)) {
+	idff_t idf = NULL;
+
+	if (theme_relative)
+		idf = idf_open(game_idf, path);
+
+	if (idf) {
+		int rc = parse_idff(idf, path, cmd_parser);
+		idf_close(idf);
+		if (rc)
+			fprintf(stderr, "Theme parsed with errors!\n");
+		return rc;
+	}
+
+	if (parse_ini(dirpath(path), cmd_parser)) {
 		fprintf(stderr, "Theme parsed with errors!\n");
 //		game_theme_free();
 		return -1;
@@ -865,19 +902,19 @@ int game_theme_load(const char *name)
 {
 	struct theme *theme;
 	char cwd[PATH_MAX];
+	int rc = -1;
 	int rel = theme_relative;
 	getdir(cwd, sizeof(cwd));
 	setdir(game_cwd);
 	theme = theme_lookup(name);
 	theme_relative = 0;
-	if (!theme || setdir(theme->path) || theme_load(dirpath(THEME_FILE))) {
-		setdir(cwd);
-		theme_relative = rel;
-		return -1;
-	}
+	if (!theme || setdir(theme->path) || theme_load(THEME_FILE))
+		goto err;
+	rc = 0;
+err:
 	setdir(cwd);
 	theme_relative = rel;
-	return 0;
+	return rc;
 }
 
 int game_theme_select(const char *name)
