@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -18,6 +19,7 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 //import android.os.PowerManager;
+import android.text.Html;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -41,7 +43,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	// private PowerManager.WakeLock wakeLock = null;
 	private int filter = GameList.ALL;
 	private GameList gl;
-	private int[] index = new int[GameList.MAX];
+	private List<Integer> index;
 	private ProgressDialog dialog;
 	private static final String LIST_TEXT = "list_text";
 	private int listNo = Globals.BASIC;
@@ -55,6 +57,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private Button alter_btn;
 	private Button btn_sync;
 	private boolean fscan = false;
+	private int listpos;
+	private int toppos;
+	private ListView listView;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +68,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		// getSystemService(Context.POWER_SERVICE);
 		// wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,
 		// Globals.ApplicationName);
-
+		index = new ArrayList<Integer>();
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
 		dialog.setMessage(getString(R.string.init));
@@ -72,10 +77,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 		View header = getLayoutInflater().inflate(R.layout.gmhead, null);
 		// View button = getLayoutInflater().inflate(R.layout.gmbtn1, null);
-		ListView listView = getListView();
+		listView = getListView();
 		listView.addHeaderView(header);
 		// listView.addFooterView(footer);
-
+		listView.setBackgroundColor(Color.BLACK);
+		listView.setBackgroundDrawable(this.getResources().getDrawable(R.drawable.wallpaper));
 		registerForContextMenu(listView);
 
 		basic_btn = (Button) findViewById(R.id.basic_btn);
@@ -85,6 +91,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			@Override
 			public void onClick(View arg0) {
 				listNo = Globals.BASIC;
+				listPosClear();
 				setTabs();
 				checkXml();
 			}
@@ -110,6 +117,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			@Override
 			public void onClick(View arg0) {
 				listNo = Globals.ALTER;
+				listPosClear();
 				setTabs();
 				checkXml();
 			}
@@ -208,7 +216,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		if (position > 0) {
 			item_index = position - 1;
 			// Log.d(Globals.TAG, "Position item: " + item_index);
-			g = gl.getInf(GameList.TITLE, index[item_index]);
+			g = gl.getInf(GameList.TITLE, index.get(item_index));
 			lwhack = true;
 			openContextMenu(v);
 		}
@@ -221,20 +229,23 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		if (lwhack) {
 			menu.setHeaderTitle(g);
 
-			if (gl.getFlag(index[item_index]) == GameList.INSTALLED) {
+			if (gl.getFlag(index.get(item_index)) == GameList.INSTALLED) {
 				menu.add(0, v.getId(), 0, getString(R.string.menustart));
-			//	if(	(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index[item_index])))).exists()){
+				if(	(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index.get(item_index))))).exists()){
 					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
-			//	}
+				}
 				menu.add(0, v.getId(), 0, getString(R.string.menudel));
 			}
 
-			if (gl.getFlag(index[item_index]) == GameList.NEW) {
+			if (gl.getFlag(index.get(item_index)) == GameList.NEW) {
 				menu.add(0, v.getId(), 0, getString(R.string.menudown));
 			}
 
-			if (gl.getFlag(index[item_index]) == GameList.UPDATE) {
+			if (gl.getFlag(index.get(item_index)) == GameList.UPDATE) {
 				menu.add(0, v.getId(), 0, getString(R.string.menustart));
+				if(	(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index.get(item_index))))).exists()){
+					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
+				}
 				menu.add(0, v.getId(), 0, getString(R.string.menuupd));
 				menu.add(0, v.getId(), 0, getString(R.string.menudel));
 			}
@@ -250,8 +261,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		if (item.getTitle() == getString(R.string.menustart)) {
 			startApp();
 		} else if (item.getTitle() == getString(R.string.menunewstart)) {
-			delSaves();
-			startApp();
+			saveDelete();
 		} else if (item.getTitle() == getString(R.string.menudel)) {
 			gameDelete();
 		} else if (item.getTitle() == getString(R.string.menuupd)) {
@@ -369,6 +379,25 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 	}
 
+	private String getFlagStringId(int i) {
+		String s = "";
+		switch (gl.getFlag(i)) {
+		case GameList.NEW:
+			s = getString(R.string.ag_new);
+		break;
+		case GameList.INSTALLED:
+			s = getString(R.string.ag_installed);
+		break;
+		case GameList.UPDATE:
+			s = getString(R.string.ag_update); 
+		break;
+		default:
+			s = getString(R.string.ag_new);
+		}
+	return "<br><small><i>"+s+"</i></small>";
+	}	
+	
+	
 	public void onError(String s) {
 		wakeLockR();
 		dialog.setCancelable(true);
@@ -400,12 +429,16 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			return Globals.GameListFileName;
 		}
 	}
+	
+	private String getHtmlTagForName(String s){
+		return "<b>"+s+"</b>";
+	}
 
 	public void listUpdate() {
-
+//		listPosSave();
 		gl = new GameList(this, getGameListName(listNo),fscan);
 		fscan =false;
-		List<String> names = new ArrayList<String>();
+		//List<String> names = new ArrayList<String>();
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
 		int j = 0;
@@ -416,46 +449,46 @@ public class GameMananger extends ListActivity implements ViewBinder {
 					|| lang_filter.equals("")) {
 				if (filter == GameList.ALL) {
 
-					listData.add(addListItem(gl.getInf(GameList.TITLE, i),
+					listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
 							getFlagId(i)));
 
-					names.add(gl.getInf(GameList.TITLE, i));
+			//		names.add(gl.getInf(GameList.TITLE, i));
 
-					index[j] = i;
+					index.add(j,i);
 					j++;
 				}
 				if (filter == GameList.INSTALLED) {
 					if (gl.getFlag(i) == GameList.INSTALLED) {
-						listData.add(addListItem(gl.getInf(GameList.TITLE, i),
+						listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
 								getFlagId(i)));
 
-						names.add(gl.getInf(GameList.TITLE, i));
+				//		names.add(gl.getInf(GameList.TITLE, i));
 
-						index[j] = i;
+						index.add(j,i);
 						j++;
 					}
 				}
 
 				if (filter == GameList.UPDATE) {
 					if (gl.getFlag(i) == GameList.UPDATE) {
-						listData.add(addListItem(gl.getInf(GameList.TITLE, i),
+						listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
 								getFlagId(i)));
 
-						names.add(gl.getInf(GameList.TITLE, i));
+			//			names.add(gl.getInf(GameList.TITLE, i));
 
-						index[j] = i;
+						index.add(j,i);
 						j++;
 					}
 				}
 
 				if (filter == GameList.NEW) {
 					if (gl.getFlag(i) == GameList.NEW) {
-						listData.add(addListItem(gl.getInf(GameList.TITLE, i),
+						listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
 								getFlagId(i)));
 
-						names.add(gl.getInf(GameList.TITLE, i));
+				//		names.add(gl.getInf(GameList.TITLE, i));
 						// images.add(this.getResources().getDrawable(getFlagId(i)));
-						index[j] = i;
+						index.add(j,i);
 						j++;
 					}
 				}
@@ -469,9 +502,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 				new int[] { R.id.list_text });
 		simpleAdapter.setViewBinder(this);
 		setListAdapter(simpleAdapter);
-
+		listPosRestore();
 		// getListView().setSelection(2);
-
 		// FIXME android 1.6 refresh bug workaround
 		if (Build.VERSION.SDK_INT == Build.VERSION_CODES.DONUT) {
 			setTabsG();
@@ -480,6 +512,21 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 
 	}
+	
+	private void listPosClear(){
+		listpos = 0;
+		toppos = 0;
+	}
+	
+	private void listPosSave(){
+		  listpos	= listView.getFirstVisiblePosition();
+	      View firstVisibleView = listView.getChildAt(0);
+	      toppos = (firstVisibleView == null) ? 0 : firstVisibleView.getTop();
+	}
+	
+	private void listPosRestore(){
+		listView.setSelectionFromTop(listpos, toppos);		
+	}
 
 	@Override
 	public boolean setViewValue(View view, Object data,
@@ -487,7 +534,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		ListItem listItem = (ListItem) data;
 
 		TextView menuItemView = (TextView) view;
-		menuItemView.setText(listItem.text);
+		menuItemView.setText(Html.fromHtml(listItem.text));
 		menuItemView.setCompoundDrawablesWithIntrinsicBounds(this
 				.getResources().getDrawable(listItem.icon), null, null, null);
 
@@ -496,14 +543,14 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	private void listDownload() {
 		dialog.setMessage(getString(R.string.init));
-
+       // listPosClear();
 		ShowDialog();
 		fscan = true;
 		new XmlDownloader(this, dialog, listNo);
 	}
 
 	private void Download() {
-
+		listPosSave();
 		dialog.setMessage(getString(R.string.init));
 
 		ShowDialogCancel();
@@ -513,8 +560,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dwn = true;
 		fscan = true;
 		downloader = new GameDownloader(this, gl.getInf(GameList.URL,
-				index[item_index]),
-				gl.getInf(GameList.NAME, index[item_index]), dialog);
+				index.get(item_index)),
+				gl.getInf(GameList.NAME, index.get(item_index)), dialog);
 
 		// Toast.makeText(this, gl.getInf(GameList.TITLE, index[item_index] ),
 		// Toast.LENGTH_LONG).show();
@@ -538,13 +585,15 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			Toast.makeText(
 					this,
 					getString(R.string.gdwncompl) + ": "
-							+ gl.getInf(GameList.TITLE, index[item_index]),
+							+ gl.getInf(GameList.TITLE, index.get(item_index)),
 					Toast.LENGTH_LONG).show();
 		} catch (ArrayIndexOutOfBoundsException e) {
 		}
 
 	}
 
+	
+	
 	private void gameDelete() {
 
 		DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
@@ -572,15 +621,47 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	}
 
+	private void saveDelete() {
+
+		DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				switch (which) {
+				case DialogInterface.BUTTON_POSITIVE:
+					(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index.get(item_index))))).delete();
+					startApp();
+					break;
+
+				case DialogInterface.BUTTON_NEGATIVE:
+
+					break;
+				}
+			}
+		};
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setIcon(R.drawable.warning);
+		builder.setTitle(g);
+		builder.setMessage(getString(R.string.delsaves))
+				.setPositiveButton(getString(R.string.yes), dialogClickListener)
+				.setNegativeButton(getString(R.string.no), dialogClickListener)
+				.show();
+
+	}
+	
+
+	
+	
 	void Delete() {
+		listPosSave();
 		Globals.delete(new File(Globals.getOutFilePath(Globals.GameDir
-				+ gl.getInf(GameList.NAME, index[item_index]))));
+				+ gl.getInf(GameList.NAME, index.get(item_index)))));
 		fscan = true;
 		listUpdate();
 		Toast.makeText(
 				this,
 				getString(R.string.delgame) + ": "
-						+ gl.getInf(GameList.TITLE, index[item_index]),
+						+ gl.getInf(GameList.TITLE, index.get(item_index)),
 				Toast.LENGTH_LONG).show();
 
 	}
@@ -602,7 +683,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 		};
 
-		String s = gl.getInf(GameList.SIZE, index[item_index]);
+		String s = gl.getInf(GameList.SIZE, index.get(item_index));
 		if (s == null)
 			s = getString(R.string.na);
 
@@ -626,14 +707,14 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private void startAbout() {
 		Intent myIntent = new Intent(this, AboutGame.class);
 		Bundle b = new Bundle();
-		b.putString("name", gl.getInf(GameList.NAME, index[item_index]));
-		b.putString("title", gl.getInf(GameList.TITLE, index[item_index]));
-		b.putString("lang", gl.getInf(GameList.LANG, index[item_index]));
-		b.putString("ver", gl.getInf(GameList.VERSION, index[item_index]));
-		b.putString("file", gl.getInf(GameList.URL, index[item_index]));
-		b.putString("url", gl.getInf(GameList.DESCURL, index[item_index]));
-		b.putString("size", gl.getInf(GameList.SIZE, index[item_index]));
-		b.putInt("flag", gl.getFlag(index[item_index]));
+		b.putString("name", gl.getInf(GameList.NAME, index.get(item_index)));
+		b.putString("title", gl.getInf(GameList.TITLE, index.get(item_index)));
+		b.putString("lang", gl.getInf(GameList.LANG, index.get(item_index)));
+		b.putString("ver", gl.getInf(GameList.VERSION, index.get(item_index)));
+		b.putString("file", gl.getInf(GameList.URL, index.get(item_index)));
+		b.putString("url", gl.getInf(GameList.DESCURL, index.get(item_index)));
+		b.putString("size", gl.getInf(GameList.SIZE, index.get(item_index)));
+		b.putInt("flag", gl.getFlag(index.get(item_index)));
 		b.putInt("INSTALLED", GameList.INSTALLED);
 		b.putInt("UPDATE", GameList.UPDATE);
 		b.putInt("NEW", GameList.NEW);
@@ -643,20 +724,18 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	private void startApp() {
-
+		listPosSave();
 		if (checkInstall()) {
 			// rewriteRC(gl.getInf(GameList.NAME, index[item_index]));
 			Intent myIntent = new Intent(this, SDLActivity.class);
 			Bundle b = new Bundle();
-			b.putString("game", gl.getInf(GameList.NAME, index[item_index]));
+			b.putString("game", gl.getInf(GameList.NAME, index.get(item_index)));
 			myIntent.putExtras(b);
 			startActivity(myIntent);
 		}
 	}
 	
-	private void delSaves() {
-		(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index[item_index])))).delete();
-		}
+
 
 	@Override
 	protected void onPause() {
@@ -723,7 +802,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		Toast.makeText(
 				this,
 				getString(R.string.dwncancel) + ": "
-						+ gl.getInf(GameList.TITLE, index[item_index]),
+						+ gl.getInf(GameList.TITLE, index.get(item_index)),
 				Toast.LENGTH_LONG).show();
 	}
 
@@ -766,12 +845,15 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	@Override
 	public void onSaveInstanceState(Bundle savedInstanceState) {
+		listPosSave();
 		savedInstanceState.putBoolean("onpause", onpause);
 		savedInstanceState.putBoolean("dwn", dwn);
 		savedInstanceState.putBoolean("isdwn", isdwn);
 		savedInstanceState.putString("lang_filter", lang_filter);
 		savedInstanceState.putInt("listNo", listNo);
 		savedInstanceState.putInt("filter", filter);
+		savedInstanceState.putInt("listpos", listpos);
+		savedInstanceState.putInt("toppos", toppos);
 		savedInstanceState.putInt("pose", item_index);
 		super.onSaveInstanceState(savedInstanceState);
 	}
@@ -786,6 +868,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listNo = savedInstanceState.getInt("listNo");
 		filter = savedInstanceState.getInt("filter");
 		item_index = savedInstanceState.getInt("pose");
+		listpos = savedInstanceState.getInt("listpos");
+		toppos = savedInstanceState.getInt("toppos");
+		listPosRestore();
 	}
 
 }

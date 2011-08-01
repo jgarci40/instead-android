@@ -84,4 +84,5 @@
     <string name="dataerror">File-dati scaricando errore</string>
     <string name="sizeyesno">Vuoi continuare a scaricare?</string>
     <string name="fontsize">Dimensione carattere</string>
+    <string name="delsaves">Eliminare salvare gioco?</string>
 </resources>

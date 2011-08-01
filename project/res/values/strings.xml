@@ -84,4 +84,5 @@
     <string name="fontsize">Font size</string>
     <string name="menunewstart">Start new game</string>
     <string name="vsmall">Very small</string>
+    <string name="delsaves">Delete save game?</string>
 </resources>
