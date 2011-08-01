@@ -84,4 +84,5 @@
     <string name="dataerror">数据文件下载错误</string>
     <string name="sizeyesno">你想继续下载？</string>
     <string name="fontsize">字体大小</string>
+    <string name="delsaves">删除保存游戏？</string>
 </resources>

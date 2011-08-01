@@ -1,7 +1,6 @@
 	<LinearLayout android:id="@+id/Linear10"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:orientation="vertical" 	android:background="#CCCCCC"
-			xmlns:android="http://schemas.android.com/apk/res/android">
+		android:orientation="vertical" 	xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<RelativeLayout android:id="@+id/Linear11"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
@@ -24,7 +23,7 @@
 
 	<LinearLayout android:id="@+id/Linear12"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:orientation="horizontal" 	xmlns:android="http://schemas.android.com/apk/res/android" android:gravity="center" android:background="#000000">
+		android:orientation="horizontal" 	xmlns:android="http://schemas.android.com/apk/res/android" android:gravity="center">
 <Button android:text="@string/basic" android:id="@+id/basic_btn" android:layout_width="160dip" android:layout_height="50dip" android:background="@drawable/tab_c"></Button>
 <Button android:text="@string/alter" android:id="@+id/alter_btn" android:layout_width="160dip" android:layout_height="50dip" android:background="@drawable/tab"></Button>	
 	

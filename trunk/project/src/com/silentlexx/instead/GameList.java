@@ -11,6 +11,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -49,15 +51,16 @@ public class GameList {
 	protected static final String ITEM_DESCURL = "descurl";
 	protected static final String ITEM_LANG = "lang";
 	protected static final String ITEM_SIZE = "size";
-	
+	private String na;
 	private boolean ok = false;
 
-	protected static final int MAX = 99;
+//	protected static final int MAX = 99;
 
 	private String xml;
 
 	private int length = 0;
 
+	/*
 	private String[] name = new String[MAX];
 	private String[] url = new String[MAX];
 	private String[] version = new String[MAX];
@@ -66,6 +69,16 @@ public class GameList {
 	private String[] lang = new String[MAX];
 	private String[] size = new String[MAX];
 	private int[] flag = new int[MAX];
+	*/
+	private List<Integer> flag;
+	private List<String> name;
+	private List<String> url;	
+	private List<String> version;
+	private List<String> title;
+	private List<String> descurl;
+	private List<String> lang;
+	private List<String> size;
+	
 	private Document document;
 	private GameMananger Parent;
 	private String fflags;
@@ -73,10 +86,18 @@ public class GameList {
 	
 	GameList(GameMananger _parent, String f, boolean fscan) {
 		Parent = _parent;
-	
+		na=Parent.getString(R.string.na);
+		flag = new ArrayList<Integer>();
+		name = new ArrayList<String>();
+		url = new ArrayList<String>();	
+		version = new ArrayList<String>();
+		title = new ArrayList<String>();
+		descurl = new ArrayList<String>();
+		lang = new ArrayList<String>();
+		size = new ArrayList<String>();
+				
 		fflags = Parent.getFilesDir()+"/"+f.substring(0, f.length()-3)+"db";
 
-	
 		xml = Parent.getFilesDir()+"/"+f;		
 		
 		ok = readXML();
@@ -97,7 +118,7 @@ public class GameList {
 
 	private void setFlags(){
 		
-		int i = 0;
+		//int i = 0;
 		
 		BufferedReader input = null;
 		try {
@@ -111,8 +132,8 @@ public class GameList {
 			String line = null;
 			while ((line = input.readLine()) != null) {
 			  
-				flag[i]=Integer.parseInt(line.trim());
-				i++;	
+				flag.add(Integer.parseInt(line.trim()));
+				///i++;	
 				//Log.d("LEXX", line);
 				
 			}
@@ -143,7 +164,7 @@ public class GameList {
 		String buf = "";
 		
 		for (int i = 0; i < getLength(); i++) {
-			path = Globals.getOutFilePath(Globals.GameDir + name[i]
+			path = Globals.getOutFilePath(Globals.GameDir + name.get(i)
 					+ "/main.lua");
 
 			if (checkFile(path)) {
@@ -200,7 +221,7 @@ public class GameList {
 
 						if (line.toLowerCase().matches(
 								"(.*)\\$version:(\\ *)"
-										+ version[n].toLowerCase() + "\\$(.*)")) {
+										+ version.get(n).toLowerCase() + "\\$(.*)")) {
 							input.close();
 							return true;
 						} else {
@@ -284,38 +305,45 @@ public class GameList {
 		length = nodes.getLength();
 		// //Log.d(Globals.TAG,"Nodes: "+length);
 		for (int i = 0; i < length; i++) {
-			processItemNode(nodes.item(i), i);
-
+	
+			name.add(na);
+			url.add(na);	
+			version.add(na);
+			title.add(na);
+			descurl.add(na);
+			lang.add(na);
+			size.add(na);			
+			processItemNode(nodes.item(i),i);
 		}
 
 	}
 
-	private void processItemNode(Node itemNode, int n) {
+	private void processItemNode(Node itemNode,int n) {
 		for (int i = 0; i < itemNode.getChildNodes().getLength(); i++) {
 			Node subnode = ((NodeList) itemNode.getChildNodes()).item(i);
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_NAME)) {
-				name[n] = subnode.getFirstChild().getNodeValue();
+				name.add(n,subnode.getFirstChild().getNodeValue());
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_TITLE)) {
-				title[n] = subnode.getFirstChild().getNodeValue();
+				title.add(n,subnode.getFirstChild().getNodeValue());
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_URL)) {
-				url[n] = subnode.getFirstChild().getNodeValue();
+				url.add(n,subnode.getFirstChild().getNodeValue());
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_VERSION)) {
-				version[n] = subnode.getFirstChild().getNodeValue();
+				version.add(n,subnode.getFirstChild().getNodeValue());
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_DESCURL)) {
-				descurl[n] = subnode.getFirstChild().getNodeValue();
+				descurl.add(n,subnode.getFirstChild().getNodeValue());
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_LANG)) {
-				lang[n] = subnode.getFirstChild().getNodeValue();
+				lang.add(n,subnode.getFirstChild().getNodeValue());
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_SIZE)) {
@@ -326,14 +354,15 @@ public class GameList {
 						Float.toString((b / 1024) / 1024));
 				bigDecimal = bigDecimal.setScale(2, BigDecimal.ROUND_UP);
 
-				size[n] = bigDecimal.toString() + " "
-						+ Parent.getString(R.string.mb);
+				size.add(n,bigDecimal.toString() + " "
+						+ Parent.getString(R.string.mb));
 
 			}
 
 		}
 	}
 
+	/*
 	public String[] getInfs(int type) {
 		switch (type) {
 		case NAME:
@@ -354,24 +383,24 @@ public class GameList {
 			return null;
 		}
 	}
-
+*/
 	public String getInf(int type, int n) {
 		if (type >= 0 || type <= length) {
 			switch (type) {
 			case NAME:
-				return name[n];
+				return name.get(n);
 			case TITLE:
-				return title[n];
+				return title.get(n);
 			case URL:
-				return url[n];
+				return url.get(n);
 			case DESCURL:
-				return descurl[n];
+				return descurl.get(n);
 			case LANG:
-				return lang[n];
+				return lang.get(n);
 			case VERSION:
-				return version[n];
+				return version.get(n);
 			case SIZE:
-				return size[n];
+				return size.get(n);
 			default:
 				return null;
 			}
@@ -381,7 +410,7 @@ public class GameList {
 
 	public int getFlag(int i) {
 		if (i >= 0 || i <= length) {
-			return flag[i];
+			return flag.get(i);
 		}
 		return -1;
 	}

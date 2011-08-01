@@ -16,11 +16,10 @@
 				android:orientation="horizontal" android:layout_gravity="center"
 				android:background="#CCCCCC" android:layout_marginBottom="5dip">
 
-				<ImageView android:src="@drawable/icon"
-					android:adjustViewBounds="true" android:id="@+id/logo"
+				<ImageView android:adjustViewBounds="true" android:id="@+id/logo"
 					android:layout_height="40dip" android:scaleType="fitCenter"
 					android:layout_width="wrap_content" android:layout_marginBottom="1dip"
-					android:layout_marginTop="1dip"></ImageView>
+					android:layout_marginTop="1dip" android:src="@drawable/menu"></ImageView>
 
 
 				<TextView android:id="@+id/tv" android:layout_width="wrap_content"

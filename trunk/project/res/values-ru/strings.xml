@@ -57,8 +57,8 @@
     <string name="ag_title">Название</string>
     <string name="ag_file">Zip url</string>
     <string name="ag_ver">Версия</string>
-    <string name="ag_installed">Установленная</string>
-    <string name="ag_new">Не уставлено</string>
+    <string name="ag_installed">Установлено</string>
+    <string name="ag_new">Не установлено</string>
     <string name="ag_update">Доступна новая версия</string>
     <string name="ag_status">Состояние</string>
     <string name="dwncancel">Загрузка отменена</string>
@@ -84,4 +84,5 @@
     <string name="fontsize">Размер шрифта</string>
     <string name="menunewstart">Начать новую игру</string>
     <string name="vsmall">Очень маленький</string>
+    <string name="delsaves">Удалить сохранения игры?</string>
 </resources>
