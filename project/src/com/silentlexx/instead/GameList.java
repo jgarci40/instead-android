@@ -71,6 +71,7 @@ public class GameList {
 	private int[] flag = new int[MAX];
 	*/
 	private List<Integer> flag;
+	private List<Integer> bytesize;
 	private List<String> name;
 	private List<String> url;	
 	private List<String> version;
@@ -88,6 +89,7 @@ public class GameList {
 		Parent = _parent;
 		na=Parent.getString(R.string.na);
 		flag = new ArrayList<Integer>();
+		bytesize = new ArrayList<Integer>();
 		name = new ArrayList<String>();
 		url = new ArrayList<String>();	
 		version = new ArrayList<String>();
@@ -133,8 +135,7 @@ public class GameList {
 			while ((line = input.readLine()) != null) {
 			  
 				flag.add(Integer.parseInt(line.trim()));
-				///i++;	
-				//Log.d("LEXX", line);
+
 				
 			}
 			} catch (NullPointerException e) {
@@ -347,7 +348,8 @@ public class GameList {
 			}
 
 			if (subnode.getNodeName().toLowerCase().equals(ITEM_SIZE)) {
-
+				bytesize.add(Integer.parseInt(subnode.getFirstChild()
+						.getNodeValue()));
 				float b = Float.parseFloat(subnode.getFirstChild()
 						.getNodeValue());
 				BigDecimal bigDecimal = new BigDecimal(
@@ -419,6 +421,9 @@ public class GameList {
 		return length;
 	}
 
+	public int getByteSize(int i){
+		return bytesize.get(i);
+	}
 
 
 }

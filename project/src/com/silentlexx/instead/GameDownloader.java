@@ -18,21 +18,44 @@ class GameDownloader extends Thread {
 			Parent = gameMananger;
 		}
 
-		public void setMessage(final String str) {
+		public void setMessage(final String str, final int prg) {
 			class Callback implements Runnable {
 				public ProgressDialog Status;
 				public String text;
+				public int progress;
+				//public int maximum;
 
 				public void run() {
+				//	Status.setMax(maximum);
+					Status.setProgress(progress);
 					Status.setMessage(text);
 				}
 			}
 			Callback cb = new Callback();
 			cb.text = new String(str);
+			//cb.maximum = max;
+			cb.progress = prg;
 			cb.Status = Status;
 			Parent.runOnUiThread(cb);
 		}
 
+		public void setMax(final int max) {
+			class Callback implements Runnable {
+				public ProgressDialog Status;
+				public int maximum;
+
+				public void run() {
+					Status.setMax(maximum);
+					
+				}
+			}
+			Callback cb = new Callback();
+			cb.maximum = max;
+			cb.Status = Status;
+			Parent.runOnUiThread(cb);
+		}
+		
+		
 	}
 
 	public GameDownloader(GameMananger gameMananger, String url, String name,
@@ -50,7 +73,7 @@ class GameDownloader extends Thread {
 
 	@Override
 	public void run() {
-		Parent.wakeLockA();
+		int op = 0;
 		String path;
 		// Create output directory
 		try {
@@ -61,10 +84,23 @@ class GameDownloader extends Thread {
 		try {
 			if (!Parent.onpause)
 				Status.setMessage(Parent.getString(R.string.connect) + " "
-						+ gameUrl);
+						+ gameUrl,op);
 		} catch (NullPointerException e) {
 		}
-		// Parent.ShowDialog();
+		
+		/*
+		   try {
+			    HttpURLConnection con = 
+			      (HttpURLConnection) new URL(gameUrl).openConnection();
+			      con.setRequestMethod("HEAD");
+			      con.connect();
+			      int numbytes = Integer.parseInt(con.getHeaderField("Content-length"));
+					if (!Parent.onpause && numbytes > 0)
+						Status.setMax(numbytes);			      
+			    } 
+			    catch (Exception e) {
+			    }
+		*/
 
 		HttpGet request = new HttpGet(gameUrl);
 		request.addHeader("Accept", "*/*");
@@ -81,12 +117,14 @@ class GameDownloader extends Thread {
 		if (response == null) {
 			if (!Parent.onpause)
 				Status.setMessage(Parent.getString(R.string.conerror) + " "
-						+ gameUrl);
+						+ gameUrl,op);
 			Parent.onError(Parent.getString(R.string.conerror) + " " + gameUrl);
 			return;
 
 		}
 
+
+		
 		if (Parent.getStopDwn()) {
 			Globals.delete(new File(Globals.getOutFilePath(gameDir)));
 			DownloadComplete = true;
@@ -95,26 +133,30 @@ class GameDownloader extends Thread {
 		}
 		;
 
+		
+		
 		Globals.delete(new File(Globals.getOutFilePath(gameDir)));
 		try {
 			if (!Parent.onpause)
 				Status.setMessage(Parent.getString(R.string.downdata) + " "
-						+ gameUrl);
+						+ gameUrl,op);
 		} catch (NullPointerException e) {
 		}
 		ZipInputStream zip = null;
 		try {
 			zip = new ZipInputStream(response.getEntity().getContent());
+		
 		} catch (java.io.IOException e) {
 			if (!Parent.onpause)
 				Status.setMessage(Parent.getString(R.string.dataerror) + " "
-						+ gameUrl);
+						+ gameUrl,op);
 			Parent.onError(Parent.getString(R.string.dataerror) + " " + gameUrl);
 			return;
 		}
 
+		
 		byte[] buf = new byte[1024];
-
+		
 		ZipEntry entry = null;
 
 		while (true) {
@@ -127,9 +169,10 @@ class GameDownloader extends Thread {
 			entry = null;
 			try {
 				entry = zip.getNextEntry();
+
 			} catch (java.io.IOException e) {
 				if (!Parent.onpause)
-					Status.setMessage(Parent.getString(R.string.dataerror));
+					Status.setMessage(Parent.getString(R.string.dataerror),op);
 				Parent.onError(Parent.getString(R.string.dataerror));
 				return;
 			}
@@ -148,6 +191,7 @@ class GameDownloader extends Thread {
 			OutputStream out = null;
 			path = Globals.getOutFilePath(Globals.GameDir + entry.getName());
 
+			
 			try {
 				out = new FileOutputStream(path);
 			} catch (FileNotFoundException e) {
@@ -157,7 +201,7 @@ class GameDownloader extends Thread {
 			if (out == null) {
 				if (!Parent.onpause)
 					Status.setMessage(Parent.getString(R.string.writefileerorr)
-							+ " " + path);
+							+ " " + path,op);
 				Parent.onError(Parent.getString(R.string.writefileerorr) + " "
 						+ path);
 				return;
@@ -172,7 +216,7 @@ class GameDownloader extends Thread {
 			try {
 				if (!Parent.onpause)
 					Status.setMessage(Parent.getString(R.string.downfile) + " "
-							+ path);
+							+ path,op);
 			} catch (NullPointerException e) {
 			}
 
@@ -181,12 +225,13 @@ class GameDownloader extends Thread {
 				int len;
 				while ((len = zip.read(buf)) > 0) {
 					out.write(buf, 0, len);
+					op=op+len;
 				}
 				out.flush();
 			} catch (java.io.IOException e) {
 				if (!Parent.onpause)
 					Status.setMessage(Parent.getString(R.string.writefile)
-							+ " " + path);
+							+ " " + path,op);
 				Parent.onError(Parent.getString(R.string.writefile) + " "
 						+ path);
 				return;
@@ -205,7 +250,7 @@ class GameDownloader extends Thread {
 			public GameMananger Parent;
 
 			public void run() {
-				Parent.wakeLockR();
+
 				Parent.gameIsDownload();
 				Parent.listUpdate();
 			}
@@ -220,7 +265,7 @@ class GameDownloader extends Thread {
 			public GameMananger Parent;
 
 			public void run() {
-				Parent.wakeLockR();
+
 				Parent.sayCancel();
 			}
 		}

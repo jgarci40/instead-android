@@ -13,8 +13,7 @@ import android.app.ProgressDialog;
 
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
+
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -195,10 +194,14 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			dialog.dismiss();
 		}
 		dialog = new ProgressDialog(this);
-		dialog.setIndeterminate(true);
+		//dialog.setIndeterminate(true);
+		dialog.setIndeterminate(false);
 		dialog.setTitle(getString(R.string.waitdwn) + " \"" + g + "\"...");
 		dialog.setMessage(getString(R.string.init));
-		dialog.setCancelable(false);
+	    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+	    dialog.setMax(gl.getByteSize(index.get(item_index)));
+	    dialog.setProgress(0);
+		dialog.setCancelable(true);
 		dialog.setButton(getString(R.string.cancel),
 				new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
@@ -344,23 +347,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 	}
 
-	public void wakeLockA() {
-
-		if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-		} else {
-			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-		}
-		// wakeLock.acquire();
-	}
-
-	public void wakeLockR() {
-
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-
-		// wakeLock.release();
-
-	}
 
 	private int getFlagId(int i) {
 
@@ -399,7 +385,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	
 	
 	public void onError(String s) {
-		wakeLockR();
+	
 		dialog.setCancelable(true);
 		dwn = false;
 		downloader = null;
@@ -762,7 +748,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 				if (dialog.isShowing()) {
 					dialog.dismiss();
 				}
-				wakeLockR();
+
 				gameIsDownload();
 
 			} else {
@@ -774,7 +760,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			if (dialog.isShowing()) {
 				dialog.dismiss();
 			}
-			wakeLockR();
+
 			// FIXME
 			if (isdwn) {
 				gameIsDownload();
