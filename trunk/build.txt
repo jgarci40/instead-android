@@ -1,0 +1,4 @@
+For build, download INSTEAD src from SVN first:
+
+    cd project/jni/src
+    ./download-instead.sh
