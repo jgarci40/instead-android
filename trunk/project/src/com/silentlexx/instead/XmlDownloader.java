@@ -74,7 +74,7 @@ class XmlDownloader extends Thread {
 
 	@Override
 	public void run() {
-		Parent.wakeLockA();
+	
 		try {
 			if (!Parent.onpause)
 				Status.setMessage(Parent.getString(R.string.connect) + " "
@@ -174,7 +174,7 @@ class XmlDownloader extends Thread {
 			public GameMananger Parent;
 
 			public void run() {
-				Parent.wakeLockR();
+		
 				Parent.listIsDownload();
 				Parent.listUpdate();
 			}
