@@ -1,5 +1,0 @@
-clean:
-all:
-install:
-	if not exist ..\bin\icon mkdir ..\bin\icon
-	copy sdl_instead.png ..\bin\icon
