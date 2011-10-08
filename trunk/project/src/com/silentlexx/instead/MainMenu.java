@@ -38,7 +38,6 @@ import android.widget.SimpleAdapter.ViewBinder;
 
 public class MainMenu extends ListActivity implements ViewBinder {
 	private ProgressDialog dialog;
-	private TextView email;
 	protected boolean dwn = false;
 	protected boolean onpause = false;
 	private ListView listView;
@@ -54,6 +53,8 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		Globals.lastGame = new LastGame(this);
+		
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
 		dialog.setMessage(getString(R.string.init));
@@ -69,14 +70,26 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		listView.setBackgroundDrawable(this.getResources().getDrawable(
 				R.drawable.wallpaper));
 		registerForContextMenu(listView);
+		showMenu();
+		if (!dwn)
+			checkRC();
+
+	}
+
+	private void showMenu(){
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
-		listData.add(addListItem(getHtmlTagForName(getString(R.string.run)),
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.run))+ BR
+				+ getHtmlTagForSmall(Globals.lastGame.getTitle()),
 				R.drawable.start));
-		listData.add(addListItem(getHtmlTagForName(getString(R.string.gmlist)),
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.gmlist))+
+				BR+
+				getHtmlTagForSmall(getString(R.string.gmwhat)),
 				R.drawable.gamelist));
 		listData.add(addListItem(
-				getHtmlTagForName(getString(R.string.options)),
+				getHtmlTagForName(getString(R.string.options))+
+				BR+
+				getHtmlTagForSmall(getString(R.string.optwhat)),
 				R.drawable.options));
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.app_name))
 				+ BR
@@ -92,17 +105,14 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				new int[] { R.id.list_text });
 		simpleAdapter.setViewBinder(this);
 		setListAdapter(simpleAdapter);
-		if (!dwn)
-			checkRC();
-
 	}
-
+	
 	private String getHtmlTagForName(String s) {
 		return "<b>" + s + "</b>";
 	}
 
 	private String getHtmlTagForSmall(String s) {
-		return "<small>" + s + "</small>";
+		return "<small><i>" + s + "</i></small>";
 	}
 
 	@Override
@@ -171,6 +181,9 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private void startApp() {
 		if (checkInstall()) {
 			Intent myIntent = new Intent(this, SDLActivity.class);
+			Bundle b = new Bundle();
+			b.putString("game", Globals.lastGame.getName());
+			myIntent.putExtras(b);
 			startActivity(myIntent);
 		} else {
 			checkRC();
@@ -266,13 +279,18 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case R.id.dwn_menu_btn:
+			Globals.lastGame.removeLast();
 			reLoadData();
 			deleteRC();
+			showMenu();
 			break;
 	case R.id.mailme:
 		sendEmail();
 		break;
-	}
+	case R.id.about:
+		showAboutInstead();
+		break;
+	}		
 		return true;
 	}
 
@@ -414,7 +432,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			}
 
 		}
-		String s = "game = tutorial3\nkbd = 2\nautosave = 1\nowntheme = 0\nhl = 1\nclick = 1\nmusic = 1\nfscale = 12\n"
+		String s = "game = "+Globals.TutorialGame+"\nkbd = 2\nautosave = 1\nowntheme = 0\nhl = 0\nclick = 1\nmusic = 1\nfscale = 12\n"
 				+ locale + theme + "mode = " + res + "\n";
 		return s;
 	}

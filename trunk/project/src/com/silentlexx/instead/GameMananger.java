@@ -707,6 +707,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listPosSave();
 		if (checkInstall()) {
 			// rewriteRC(gl.getInf(GameList.NAME, index[item_index]));
+			Globals.lastGame.setLast(gl.getInf(GameList.TITLE, index.get(item_index)), gl.getInf(GameList.NAME, index.get(item_index)));
+			
 			Intent myIntent = new Intent(this, SDLActivity.class);
 			Bundle b = new Bundle();
 			b.putString("game", gl.getInf(GameList.NAME, index.get(item_index)));
