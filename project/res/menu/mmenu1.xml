@@ -4,5 +4,6 @@
 		android:icon="@drawable/download"></item>
 	
 <item android:icon="@drawable/email_go" android:id="@+id/mailme" android:title="@string/mailme"></item>
+<item android:id="@+id/about" android:title="@string/about_btn" android:icon="@drawable/info"></item>
 
 </menu>

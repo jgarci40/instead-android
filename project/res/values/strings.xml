@@ -87,4 +87,7 @@
     <string name="delsaves">Delete save game?</string>
     <string name="mailme">Send me email</string>
     <string name="ver">Version</string>
+    <string name="tutorial">Tutorial</string>
+    <string name="gmwhat">Install and run the game</string>
+    <string name="optwhat">Sound and font</string>
 </resources>
