@@ -85,4 +85,6 @@
     <string name="sizeyesno">Працягнуць загрузку?</string>
     <string name="fontsize">Памер шрыфта</string>
     <string name="delsaves">Выдаліць захавання гульні?</string>
+    <string name="mailme">Адправіць мне па электроннай пошце</string>
+    <string name="ver">Версія</string>
 </resources>

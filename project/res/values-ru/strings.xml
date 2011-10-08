@@ -85,4 +85,6 @@
     <string name="menunewstart">Начать новую игру</string>
     <string name="vsmall">Очень маленький</string>
     <string name="delsaves">Удалить сохранения игры?</string>
+    <string name="mailme">Отправить мне email</string>
+    <string name="ver">Версия</string>
 </resources>

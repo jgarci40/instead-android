@@ -85,4 +85,6 @@
     <string name="sizeyesno">Продовжити завантаження?</string>
     <string name="fontsize">Розмір шрифту</string>
     <string name="delsaves">Видалити збереження гри?</string>
+    <string name="mailme">Надіслати мені по електронній пошті</string>
+    <string name="ver">Версія</string>
 </resources>

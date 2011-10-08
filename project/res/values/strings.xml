@@ -85,4 +85,6 @@
     <string name="menunewstart">Start new game</string>
     <string name="vsmall">Very small</string>
     <string name="delsaves">Delete save game?</string>
+    <string name="mailme">Send me email</string>
+    <string name="ver">Version</string>
 </resources>

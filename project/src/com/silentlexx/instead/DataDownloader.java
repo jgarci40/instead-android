@@ -9,11 +9,11 @@ import android.util.Log;
 class DataDownloader extends Thread {
 	class StatusWriter {
 		private ProgressDialog Status;
-		private MainActivity Parent;
+		private MainMenu Parent;
 
-		public StatusWriter(ProgressDialog _Status, MainActivity mainActivity) {
+		public StatusWriter(ProgressDialog _Status, MainMenu mainMenu) {
 			Status = _Status;
-			Parent = mainActivity;
+			Parent = mainMenu;
 		}
 
 		public void setMessage(final String str) {
@@ -33,10 +33,10 @@ class DataDownloader extends Thread {
 
 	}
 
-	public DataDownloader(MainActivity mainActivity, ProgressDialog _Status) {
-		Parent = mainActivity;
+	public DataDownloader(MainMenu mainMenu, ProgressDialog _Status) {
+		Parent = mainMenu;
 		DownloadComplete = false;
-		Status = new StatusWriter(_Status, mainActivity);
+		Status = new StatusWriter(_Status, mainMenu);
 		// Status.setMessage( Parent.getString(R.string.connect) +" "+
 		// Globals.DataDownloadUrl );
 		this.start();
@@ -44,8 +44,6 @@ class DataDownloader extends Thread {
 
 	@Override
 	public void run() {
-		Parent.wakeLockA();
-
 		String path = null;
 		
 		(new File(Globals.getStorage() + Globals.ApplicationName)).mkdir();
@@ -153,10 +151,9 @@ class DataDownloader extends Thread {
 
 	private void initParent() {
 		class Callback implements Runnable {
-			public MainActivity Parent;
+			public MainMenu Parent;
 
 			public void run() {
-				Parent.wakeLockR();
 				Parent.showRun();
 			}
 		}
@@ -167,5 +164,5 @@ class DataDownloader extends Thread {
 
 	public boolean DownloadComplete;
 	public StatusWriter Status;
-	private MainActivity Parent;
+	private MainMenu Parent;
 }

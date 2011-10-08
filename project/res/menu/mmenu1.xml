@@ -3,5 +3,6 @@
 	<item android:title="@string/redwn" android:id="@+id/dwn_menu_btn"
 		android:icon="@drawable/download"></item>
 	
-<item android:icon="@drawable/info" android:title="@string/about_btn" android:id="@+id/about_menu_btn"></item>
+<item android:icon="@drawable/email_go" android:id="@+id/mailme" android:title="@string/mailme"></item>
+
 </menu>
