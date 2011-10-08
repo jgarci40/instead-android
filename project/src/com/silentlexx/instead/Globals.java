@@ -21,9 +21,13 @@ class Globals {
 	public static final String Options = "appdata/insteadrc";
 	public static final String GameFlags = ".gameflags";
 	public static final String DataFlag = ".version";
+	public static final String LastGameOpt = "lastgame.dat";
+	public static final String TutorialGame = "tutorial3";
 	public static final int BASIC = 1;
 	public static final int ALTER = 2;
 
+	public static LastGame lastGame;
+	
 	class Lang {
 		public static final String RU = "ru";
 		public static final String EN = "en";
