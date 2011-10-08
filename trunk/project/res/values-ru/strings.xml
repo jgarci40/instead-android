@@ -87,4 +87,7 @@
     <string name="delsaves">Удалить сохранения игры?</string>
     <string name="mailme">Отправить мне email</string>
     <string name="ver">Версия</string>
+    <string name="tutorial">Учебник</string>
+    <string name="gmwhat">Установка и запуск игр</string>
+    <string name="optwhat">Звук и шрифт</string>
 </resources>

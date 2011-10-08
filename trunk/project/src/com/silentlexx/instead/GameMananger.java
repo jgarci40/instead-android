@@ -14,6 +14,7 @@ import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 
+
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,10 +23,14 @@ import android.text.Html;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
@@ -33,8 +38,15 @@ import android.widget.SimpleAdapter.ViewBinder;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class GameMananger extends ListActivity implements ViewBinder {
+public class GameMananger extends ListActivity implements ViewBinder,  OnClickListener {
 
+    private static final int SWIPE_MIN_DISTANCE = 120;
+    private static final int SWIPE_MAX_OFF_PATH = 250;
+    private static final int SWIPE_THRESHOLD_VELOCITY = 200;
+    private GestureDetector gestureDetector;
+    View.OnTouchListener gestureListener;
+
+	
 	public final int BASIC = 1;
 	public final int ALTER = 2;
 	private int item_index = -1;
@@ -77,6 +89,17 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listView.setBackgroundDrawable(this.getResources().getDrawable(R.drawable.wallpaper));
 		registerForContextMenu(listView);
 
+		//FIXME Slide
+	      gestureDetector = new GestureDetector(new MyGestureDetector());
+	        gestureListener = new View.OnTouchListener() {
+	            public boolean onTouch(View v, MotionEvent event) {
+	                if (gestureDetector.onTouchEvent(event)) {
+	                    return true;
+	                }
+	                return false;
+	            }
+	        };
+		
 		basic_btn = (Button) findViewById(R.id.basic_btn);
 
 		basic_btn.setOnClickListener(new View.OnClickListener() {
@@ -116,8 +139,12 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 		});
 
-	}
+	
+}
 
+	
+
+	
 	private void setTabsG() {
 		switch (listNo) {
 		case Globals.BASIC:
@@ -343,16 +370,23 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 
 	private int getFlagId(int i) {
-
+	
+		//FIXME !!!!!
+		/*
+		if(gl.getInf(GameList.NAME, i).equals(Globals.lastGame.getName())){
+			return R.drawable.lastgame; 
+		}
+		*/
+		
 		switch (gl.getFlag(i)) {
 		case GameList.NEW:
-			return R.drawable.newinstall;// jog_tab_target_gray
+			return R.drawable.newinstall;
 
 		case GameList.INSTALLED:
-			return R.drawable.installed; // jog_tab_target_green
-
-		case GameList.UPDATE:
-			return R.drawable.update; // jog_tab_target_yellow
+			return R.drawable.installed;
+			
+	   case GameList.UPDATE:
+			return R.drawable.update; 
 
 		default:
 			return R.drawable.newinstall;
@@ -763,6 +797,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 		}
 
+	
 		checkXml();
 		onpause = false;
 		// Log.d(Globals.TAG, "GM: Resume");
@@ -855,4 +890,32 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listPosRestore();
 	}
 
+	//FIXME Slide
+	@Override
+	public void onClick(View arg0) {
+		// TODO Auto-generated method stub
+		Toast.makeText(this, "Click", Toast.LENGTH_SHORT).show();
+	}
+
+	//FIXME Slide
+	class MyGestureDetector extends SimpleOnGestureListener {
+	        @Override
+	        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+	            try {
+	                if (Math.abs(e1.getY() - e2.getY()) > SWIPE_MAX_OFF_PATH)
+	                    return false;
+	                // right to left swipe
+	                if(e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+	                    Toast.makeText(GameMananger.this, "Left Swipe", Toast.LENGTH_SHORT).show();
+	                }  else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+	                    Toast.makeText(GameMananger.this, "Right Swipe", Toast.LENGTH_SHORT).show();
+	                }
+	            } catch (Exception e) {
+	                // nothing
+	            }
+	            return false;
+	        }
+
+	    }
+	
 }
