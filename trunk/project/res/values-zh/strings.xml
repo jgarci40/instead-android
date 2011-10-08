@@ -85,4 +85,6 @@
     <string name="sizeyesno">你想继续下载？</string>
     <string name="fontsize">字体大小</string>
     <string name="delsaves">删除保存游戏？</string>
+    <string name="mailme">向我发送电子邮件</string>
+    <string name="ver">版本</string>
 </resources>

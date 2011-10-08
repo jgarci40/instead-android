@@ -39,7 +39,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	public final int ALTER = 2;
 	private int item_index = -1;
 	private String g;
-	// private PowerManager.WakeLock wakeLock = null;
 	private int filter = GameList.ALL;
 	private GameList gl;
 	private List<Integer> index;
@@ -63,17 +62,12 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		// PowerManager pm = (PowerManager)
-		// getSystemService(Context.POWER_SERVICE);
-		// wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,
-		// Globals.ApplicationName);
 		index = new ArrayList<Integer>();
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
 		dialog.setMessage(getString(R.string.init));
 		dialog.setIndeterminate(true);
 		dialog.setCancelable(false);
-
 		View header = getLayoutInflater().inflate(R.layout.gmhead, null);
 		// View button = getLayoutInflater().inflate(R.layout.gmbtn1, null);
 		listView = getListView();
