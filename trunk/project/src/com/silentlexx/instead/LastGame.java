@@ -10,6 +10,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 
+import android.content.Context;
+
 
 public class LastGame {
 	private String cfg;
@@ -17,7 +19,7 @@ public class LastGame {
 	private String name;
 	private String title_def;
 	
-	LastGame(MainMenu p){
+	LastGame(Context p){
 		 cfg = p.getFilesDir()+"/"+Globals.LastGameOpt;
 		 title_def = p.getString(R.string.tutorial);
 			File f = new File(cfg);
