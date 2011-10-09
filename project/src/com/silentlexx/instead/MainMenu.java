@@ -92,14 +92,19 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				BR+
 				getHtmlTagForSmall(getString(R.string.optwhat)),
 				R.drawable.options));
+		listData.add(addListItem(
+				getHtmlTagForName(getString(R.string.market))+
+				BR+
+				getHtmlTagForSmall(getString(R.string.marketon)),
+				R.drawable.market));
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.app_name))
 				+ BR
 				+ getHtmlTagForSmall(getString(R.string.ver) + " "
 						+ Globals.AppVer), R.drawable.info));
 //		listData.add(addListItem(getHtmlTagForName(getString(R.string.mailme)),
 //				R.drawable.email_go));
-		listData.add(addListItem(getHtmlTagForName(getString(R.string.exit)),
-				R.drawable.stop));
+//		listData.add(addListItem(getHtmlTagForName(getString(R.string.exit)),
+//				R.drawable.stop));
 
 		SimpleAdapter simpleAdapter = new SimpleAdapter(this, listData,
 				R.layout.list_item, new String[] { LIST_TEXT },
@@ -131,11 +136,11 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			case 3:
 				startOpt();
 				break;
-			case 4:
+			case 5:
 				showAboutInstead();
 				break;
-			case 5:
-				finish();
+			case 4:
+				openMarket();
 				break;
 			}
 
@@ -143,6 +148,13 @@ public class MainMenu extends ListActivity implements ViewBinder {
 
 	}
 
+	private void openMarket(){
+		String url = "market://details?id=com.silentlexx.instead";
+		Intent i = new Intent(Intent.ACTION_VIEW);
+		i.setData(Uri.parse(url));
+		startActivity(i);		
+	}
+	
 	private Map<String, ListItem> addListItem(String s, int i) {
 		Map<String, ListItem> iD = new HashMap<String, ListItem>();
 		ListItem l = new ListItem();
