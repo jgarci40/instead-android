@@ -6,31 +6,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
-
 import android.content.DialogInterface;
 import android.content.Intent;
-
-
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-//import android.os.PowerManager;
 import android.text.Html;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.GestureDetector;
-import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
@@ -38,15 +29,8 @@ import android.widget.SimpleAdapter.ViewBinder;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class GameMananger extends ListActivity implements ViewBinder,  OnClickListener {
+public class GameMananger extends ListActivity implements ViewBinder {
 
-    private static final int SWIPE_MIN_DISTANCE = 120;
-    private static final int SWIPE_MAX_OFF_PATH = 250;
-    private static final int SWIPE_THRESHOLD_VELOCITY = 200;
-    private GestureDetector gestureDetector;
-    View.OnTouchListener gestureListener;
-
-	
 	public final int BASIC = 1;
 	public final int ALTER = 2;
 	private int item_index = -1;
@@ -70,7 +54,8 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 	private int listpos;
 	private int toppos;
 	private ListView listView;
-	
+	private LastGame lastGame;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -86,22 +71,11 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 		listView.addHeaderView(header);
 		// listView.addFooterView(footer);
 		listView.setBackgroundColor(Color.BLACK);
-		listView.setBackgroundDrawable(this.getResources().getDrawable(R.drawable.wallpaper));
+		listView.setBackgroundDrawable(this.getResources().getDrawable(
+				R.drawable.wallpaper));
 		registerForContextMenu(listView);
 
-		//FIXME Slide
-	      gestureDetector = new GestureDetector(new MyGestureDetector());
-	        gestureListener = new View.OnTouchListener() {
-	            public boolean onTouch(View v, MotionEvent event) {
-	                if (gestureDetector.onTouchEvent(event)) {
-	                    return true;
-	                }
-	                return false;
-	            }
-	        };
-		
 		basic_btn = (Button) findViewById(R.id.basic_btn);
-
 		basic_btn.setOnClickListener(new View.OnClickListener() {
 
 			@Override
@@ -113,7 +87,6 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 			}
 		});
 
-		
 		btn_sync = (Button) findViewById(R.id.btn_sync);
 
 		btn_sync.setOnClickListener(new View.OnClickListener() {
@@ -124,8 +97,7 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 				listDownload();
 			}
 		});
-		
-		
+
 		alter_btn = (Button) findViewById(R.id.alter_btn);
 
 		alter_btn.setOnClickListener(new View.OnClickListener() {
@@ -139,12 +111,8 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 			}
 		});
 
-	
-}
+	}
 
-	
-
-	
 	private void setTabsG() {
 		switch (listNo) {
 		case Globals.BASIC:
@@ -215,13 +183,13 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 			dialog.dismiss();
 		}
 		dialog = new ProgressDialog(this);
-		//dialog.setIndeterminate(true);
+		// dialog.setIndeterminate(true);
 		dialog.setIndeterminate(false);
 		dialog.setTitle(getString(R.string.waitdwn) + " \"" + g + "\"...");
 		dialog.setMessage(getString(R.string.init));
-	    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-	    dialog.setMax(gl.getByteSize(index.get(item_index)));
-	    dialog.setProgress(0);
+		dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+		dialog.setMax(gl.getByteSize(index.get(item_index)));
+		dialog.setProgress(0);
 		dialog.setCancelable(true);
 		dialog.setButton(getString(R.string.cancel),
 				new DialogInterface.OnClickListener() {
@@ -255,7 +223,8 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 
 			if (gl.getFlag(index.get(item_index)) == GameList.INSTALLED) {
 				menu.add(0, v.getId(), 0, getString(R.string.menustart));
-				if(	(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index.get(item_index))))).exists()){
+				if ((new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME,
+						index.get(item_index))))).exists()) {
 					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
 				}
 				menu.add(0, v.getId(), 0, getString(R.string.menudel));
@@ -267,7 +236,8 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 
 			if (gl.getFlag(index.get(item_index)) == GameList.UPDATE) {
 				menu.add(0, v.getId(), 0, getString(R.string.menustart));
-				if(	(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index.get(item_index))))).exists()){
+				if ((new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME,
+						index.get(item_index))))).exists()) {
 					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
 				}
 				menu.add(0, v.getId(), 0, getString(R.string.menuupd));
@@ -368,25 +338,21 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 		}
 	}
 
-
 	private int getFlagId(int i) {
-	
-		//FIXME !!!!!
-		/*
-		if(gl.getInf(GameList.NAME, i).equals(Globals.lastGame.getName())){
-			return R.drawable.lastgame; 
+
+		if (gl.getInf(GameList.NAME, i).equals(lastGame.getName())) {
+			return R.drawable.lastgame;
 		}
-		*/
-		
+
 		switch (gl.getFlag(i)) {
 		case GameList.NEW:
 			return R.drawable.newinstall;
 
 		case GameList.INSTALLED:
 			return R.drawable.installed;
-			
-	   case GameList.UPDATE:
-			return R.drawable.update; 
+
+		case GameList.UPDATE:
+			return R.drawable.update;
 
 		default:
 			return R.drawable.newinstall;
@@ -398,22 +364,21 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 		switch (gl.getFlag(i)) {
 		case GameList.NEW:
 			s = getString(R.string.ag_new);
-		break;
+			break;
 		case GameList.INSTALLED:
 			s = getString(R.string.ag_installed);
-		break;
+			break;
 		case GameList.UPDATE:
-			s = getString(R.string.ag_update); 
-		break;
+			s = getString(R.string.ag_update);
+			break;
 		default:
 			s = getString(R.string.ag_new);
 		}
-	return "<br><small><i>"+s+"</i></small>";
-	}	
-	
-	
+		return "<br><small><i>" + s + "</i></small>";
+	}
+
 	public void onError(String s) {
-	
+
 		dialog.setCancelable(true);
 		dwn = false;
 		downloader = null;
@@ -443,16 +408,16 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 			return Globals.GameListFileName;
 		}
 	}
-	
-	private String getHtmlTagForName(String s){
-		return "<b>"+s+"</b>";
+
+	private String getHtmlTagForName(String s) {
+		return "<b>" + s + "</b>";
 	}
 
 	public void listUpdate() {
-//		listPosSave();
-		gl = new GameList(this, getGameListName(listNo),fscan);
-		fscan =false;
-		//List<String> names = new ArrayList<String>();
+		lastGame = new LastGame(this);
+		gl = new GameList(this, getGameListName(listNo), fscan);
+		fscan = false;
+		// List<String> names = new ArrayList<String>();
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
 		int j = 0;
@@ -463,46 +428,50 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 					|| lang_filter.equals("")) {
 				if (filter == GameList.ALL) {
 
-					listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
-							getFlagId(i)));
+					listData.add(addListItem(
+							getHtmlTagForName(gl.getInf(GameList.TITLE, i))
+									+ getFlagStringId(i), getFlagId(i)));
 
-			//		names.add(gl.getInf(GameList.TITLE, i));
+					// names.add(gl.getInf(GameList.TITLE, i));
 
-					index.add(j,i);
+					index.add(j, i);
 					j++;
 				}
 				if (filter == GameList.INSTALLED) {
 					if (gl.getFlag(i) == GameList.INSTALLED) {
-						listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
-								getFlagId(i)));
+						listData.add(addListItem(
+								getHtmlTagForName(gl.getInf(GameList.TITLE, i))
+										+ getFlagStringId(i), getFlagId(i)));
 
-				//		names.add(gl.getInf(GameList.TITLE, i));
+						// names.add(gl.getInf(GameList.TITLE, i));
 
-						index.add(j,i);
+						index.add(j, i);
 						j++;
 					}
 				}
 
 				if (filter == GameList.UPDATE) {
 					if (gl.getFlag(i) == GameList.UPDATE) {
-						listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
-								getFlagId(i)));
+						listData.add(addListItem(
+								getHtmlTagForName(gl.getInf(GameList.TITLE, i))
+										+ getFlagStringId(i), getFlagId(i)));
 
-			//			names.add(gl.getInf(GameList.TITLE, i));
+						// names.add(gl.getInf(GameList.TITLE, i));
 
-						index.add(j,i);
+						index.add(j, i);
 						j++;
 					}
 				}
 
 				if (filter == GameList.NEW) {
 					if (gl.getFlag(i) == GameList.NEW) {
-						listData.add(addListItem(getHtmlTagForName(gl.getInf(GameList.TITLE, i))+getFlagStringId(i),
-								getFlagId(i)));
+						listData.add(addListItem(
+								getHtmlTagForName(gl.getInf(GameList.TITLE, i))
+										+ getFlagStringId(i), getFlagId(i)));
 
-				//		names.add(gl.getInf(GameList.TITLE, i));
+						// names.add(gl.getInf(GameList.TITLE, i));
 						// images.add(this.getResources().getDrawable(getFlagId(i)));
-						index.add(j,i);
+						index.add(j, i);
 						j++;
 					}
 				}
@@ -526,20 +495,20 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 		}
 
 	}
-	
-	private void listPosClear(){
+
+	private void listPosClear() {
 		listpos = 0;
 		toppos = 0;
 	}
-	
-	private void listPosSave(){
-		  listpos	= listView.getFirstVisiblePosition();
-	      View firstVisibleView = listView.getChildAt(0);
-	      toppos = (firstVisibleView == null) ? 0 : firstVisibleView.getTop();
+
+	private void listPosSave() {
+		listpos = listView.getFirstVisiblePosition();
+		View firstVisibleView = listView.getChildAt(0);
+		toppos = (firstVisibleView == null) ? 0 : firstVisibleView.getTop();
 	}
-	
-	private void listPosRestore(){
-		listView.setSelectionFromTop(listpos, toppos);		
+
+	private void listPosRestore() {
+		listView.setSelectionFromTop(listpos, toppos);
 	}
 
 	@Override
@@ -557,7 +526,7 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 
 	private void listDownload() {
 		dialog.setMessage(getString(R.string.init));
-       // listPosClear();
+		// listPosClear();
 		ShowDialog();
 		fscan = true;
 		new XmlDownloader(this, dialog, listNo);
@@ -574,8 +543,8 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 		dwn = true;
 		fscan = true;
 		downloader = new GameDownloader(this, gl.getInf(GameList.URL,
-				index.get(item_index)),
-				gl.getInf(GameList.NAME, index.get(item_index)), dialog);
+				index.get(item_index)), gl.getInf(GameList.NAME,
+				index.get(item_index)), dialog);
 
 		// Toast.makeText(this, gl.getInf(GameList.TITLE, index[item_index] ),
 		// Toast.LENGTH_LONG).show();
@@ -606,8 +575,6 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 
 	}
 
-	
-	
 	private void gameDelete() {
 
 		DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
@@ -642,7 +609,8 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 			public void onClick(DialogInterface dialog, int which) {
 				switch (which) {
 				case DialogInterface.BUTTON_POSITIVE:
-					(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME, index.get(item_index))))).delete();
+					(new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME,
+							index.get(item_index))))).delete();
 					startApp();
 					break;
 
@@ -662,14 +630,14 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 				.show();
 
 	}
-	
 
-	
-	
 	void Delete() {
 		listPosSave();
 		Globals.delete(new File(Globals.getOutFilePath(Globals.GameDir
 				+ gl.getInf(GameList.NAME, index.get(item_index)))));
+		if(gl.getInf(GameList.NAME, index.get(item_index)).equals(lastGame.getName())){
+			lastGame.removeLast();
+		}
 		fscan = true;
 		listUpdate();
 		Toast.makeText(
@@ -740,18 +708,19 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 	private void startApp() {
 		listPosSave();
 		if (checkInstall()) {
-			// rewriteRC(gl.getInf(GameList.NAME, index[item_index]));
-			Globals.lastGame.setLast(gl.getInf(GameList.TITLE, index.get(item_index)), gl.getInf(GameList.NAME, index.get(item_index)));
-			
+
+			String game = gl.getInf(GameList.NAME, index.get(item_index));
+			String title = gl.getInf(GameList.TITLE, index.get(item_index));
+			// FIXME
+			lastGame.setLast(title, game);
+
 			Intent myIntent = new Intent(this, SDLActivity.class);
 			Bundle b = new Bundle();
-			b.putString("game", gl.getInf(GameList.NAME, index.get(item_index)));
+			b.putString("game", game);
 			myIntent.putExtras(b);
 			startActivity(myIntent);
 		}
 	}
-	
-
 
 	@Override
 	protected void onPause() {
@@ -797,7 +766,6 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 			}
 		}
 
-	
 		checkXml();
 		onpause = false;
 		// Log.d(Globals.TAG, "GM: Resume");
@@ -824,7 +792,7 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 	}
 
 	protected void checkXml() {
-		if (!(new File(getFilesDir()+"/"+getGameListName(listNo)).exists())) {
+		if (!(new File(getFilesDir() + "/" + getGameListName(listNo)).exists())) {
 			listDownload();
 		} else {
 			listUpdate();
@@ -890,32 +858,4 @@ public class GameMananger extends ListActivity implements ViewBinder,  OnClickLi
 		listPosRestore();
 	}
 
-	//FIXME Slide
-	@Override
-	public void onClick(View arg0) {
-		// TODO Auto-generated method stub
-		Toast.makeText(this, "Click", Toast.LENGTH_SHORT).show();
-	}
-
-	//FIXME Slide
-	class MyGestureDetector extends SimpleOnGestureListener {
-	        @Override
-	        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-	            try {
-	                if (Math.abs(e1.getY() - e2.getY()) > SWIPE_MAX_OFF_PATH)
-	                    return false;
-	                // right to left swipe
-	                if(e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-	                    Toast.makeText(GameMananger.this, "Left Swipe", Toast.LENGTH_SHORT).show();
-	                }  else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-	                    Toast.makeText(GameMananger.this, "Right Swipe", Toast.LENGTH_SHORT).show();
-	                }
-	            } catch (Exception e) {
-	                // nothing
-	            }
-	            return false;
-	        }
-
-	    }
-	
 }

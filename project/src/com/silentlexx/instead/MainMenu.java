@@ -43,6 +43,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private ListView listView;
 	private static final String LIST_TEXT = "list_text";
 	private static final String BR = "<br>";
+	private  LastGame lastGame;
 
 	private class ListItem {
 		public String text;
@@ -53,7 +54,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		Globals.lastGame = new LastGame(this);
+		lastGame = new LastGame(this);
 		
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
@@ -80,7 +81,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.run))+ BR
-				+ getHtmlTagForSmall(Globals.lastGame.getTitle()),
+				+ getHtmlTagForSmall(lastGame.getTitle()),
 				R.drawable.start));
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.gmlist))+
 				BR+
@@ -182,7 +183,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		if (checkInstall()) {
 			Intent myIntent = new Intent(this, SDLActivity.class);
 			Bundle b = new Bundle();
-			b.putString("game", Globals.lastGame.getName());
+			b.putString("game", lastGame.getName());
 			myIntent.putExtras(b);
 			startActivity(myIntent);
 		} else {
@@ -279,7 +280,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case R.id.dwn_menu_btn:
-			Globals.lastGame.removeLast();
+			lastGame.removeLast();
 			reLoadData();
 			deleteRC();
 			showMenu();
