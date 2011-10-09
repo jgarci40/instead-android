@@ -90,4 +90,6 @@
     <string name="tutorial">Tutorial</string>
     <string name="gmwhat">Install and run the game</string>
     <string name="optwhat">Sound and font</string>
+    <string name="marketon">Rate, write a comment</string>
+    <string name="market">Instead on the Market</string>
 </resources>

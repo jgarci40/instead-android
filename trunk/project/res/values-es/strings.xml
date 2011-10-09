@@ -90,4 +90,6 @@
     <string name="tutorial">Tutorial</string>
     <string name="gmwhat">Instalar y ejecutar el juego</string>
     <string name="optwhat">Sonido y la fuente</string>
+    <string name="marketon">Caso, escribir un comentario</string>
+    <string name="market">En cambio en el mercado</string>
 </resources>
