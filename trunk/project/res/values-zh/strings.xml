@@ -92,4 +92,5 @@
     <string name="optwhat">声音和字体</string>
     <string name="marketon">率，写评论</string>
     <string name="market">相反在市场</string>
+    <string name="nourq">URQ模块没有安装！</string>
 </resources>

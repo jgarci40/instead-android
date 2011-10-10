@@ -364,28 +364,7 @@ public class GameList {
 		}
 	}
 
-	/*
-	public String[] getInfs(int type) {
-		switch (type) {
-		case NAME:
-			return name;
-		case TITLE:
-			return title;
-		case URL:
-			return url;
-		case DESCURL:
-			return descurl;
-		case LANG:
-			return lang;
-		case VERSION:
-			return version;
-		case SIZE:
-			return size;
-		default:
-			return null;
-		}
-	}
-*/
+
 	public String getInf(int type, int n) {
 		if (type >= 0 || type <= length) {
 			switch (type) {
@@ -425,5 +404,11 @@ public class GameList {
 		return bytesize.get(i);
 	}
 
+	public int getIndexOfURQ(){
+		for(int i=0; i < getLength(); i++){
+			if(name.get(i).equals(Globals.DirURQ)) return i;
+		}
+		return -1;
+	}
 
 }

@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.app.AlertDialog;
 import android.app.ListActivity;
@@ -32,8 +34,6 @@ import android.widget.Toast;
 
 public class GameMananger extends ListActivity implements ViewBinder {
 
-	public final int BASIC = 1;
-	public final int ALTER = 2;
 	private int item_index = -1;
 	private String g;
 	private int filter = GameList.ALL;
@@ -66,11 +66,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setMessage(getString(R.string.init));
 		dialog.setIndeterminate(true);
 		dialog.setCancelable(false);
-		View header = getLayoutInflater().inflate(R.layout.gmhead, null);
-		// View button = getLayoutInflater().inflate(R.layout.gmbtn1, null);
+        setContentView(R.layout.gmtab);
 		listView = getListView();
-		listView.addHeaderView(header);
-		// listView.addFooterView(footer);
 		listView.setBackgroundColor(Color.BLACK);
 		listView.setBackgroundDrawable(this.getResources().getDrawable(
 				R.drawable.wallpaper));
@@ -117,8 +114,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		    @Override
 		    public boolean onItemLongClick(AdapterView<?> av, View v, int pos, long id) {
 				//super.onItemLongClick(av, v, pos, id);
-				if (pos > 0 && !lwhack) {
-					item_index = pos - 1;
+				if (!lwhack) {
+					item_index = pos;
 					g = gl.getInf(GameList.TITLE, index.get(item_index));
 					lwhack = true;
 					openCtxMenu();
@@ -131,12 +128,12 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 		    @Override
 		    public void onItemClick(AdapterView<?> av, View v, int pos, long id) {
-				if (pos > 0 && !lwhack) {
-					item_index = pos - 1;
+		  //  	if (!lwhack) {
+		    	item_index = pos;
 					g = gl.getInf(GameList.TITLE, index.get(item_index));
 					openGame();
-				}		    	
-		    }
+				}
+		//    }
 		});
 
 	}
@@ -299,33 +296,18 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		} else {
 			return false;
 		}
-		/*
-		 * AdapterContextMenuInfo info = (AdapterContextMenuInfo)
-		 * item.getMenuInfo(); switch (item.getItemId()) { case R.id.edit:
-		 * editNote(info.id); return true; case R.id.delete:
-		 * deleteNote(info.id); return true; default: return
-		 * super.onContextItemSelected(item);
-		 */
 		return true;
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-
-		// FIXME
 		MenuInflater inflater = getMenuInflater();
-		// FIXME !!!!
-		// if(lang_filter){
 		inflater.inflate(R.menu.gmmenu1, menu);
-		// } else {
-		// inflater.inflate(R.menu.gmmenu2, menu);
-		// }
 		return true;
 	}
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle item selection
 		item_index = -1;
 		switch (item.getItemId()) {
 		case R.id.upd_menu_btn:
@@ -360,11 +342,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			lang_filter = Globals.Lang.ALL;
 			listUpdate();
 			return true;
-			/*
-			 * case R.id.basic_menu_btn: listNo = Globals.BASIC; checkXml();
-			 * return true; case R.id.alter_menu_btn: listNo = Globals.ALTER;
-			 * checkXml(); return true;
-			 */
 		default:
 			return super.onOptionsItemSelected(item);
 		}
@@ -414,10 +391,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setCancelable(true);
 		dwn = false;
 		downloader = null;
-		// Log.d(Globals.TAG, s);
 		Log.e("Instead ERORR: ", s);
-		// listUpdate();
-		// Toast.makeText(this, s, Toast.LENGTH_LONG).show();
 
 	}
 
@@ -449,7 +423,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		lastGame = new LastGame(this);
 		gl = new GameList(this, getGameListName(listNo), fscan);
 		fscan = false;
-		// List<String> names = new ArrayList<String>();
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
 		int j = 0;
@@ -464,8 +437,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 							getHtmlTagForName(gl.getInf(GameList.TITLE, i))
 									+ getFlagStringId(i), getFlagId(i)));
 
-					// names.add(gl.getInf(GameList.TITLE, i));
-
 					index.add(j, i);
 					j++;
 				}
@@ -474,8 +445,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 						listData.add(addListItem(
 								getHtmlTagForName(gl.getInf(GameList.TITLE, i))
 										+ getFlagStringId(i), getFlagId(i)));
-
-						// names.add(gl.getInf(GameList.TITLE, i));
 
 						index.add(j, i);
 						j++;
@@ -488,8 +457,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 								getHtmlTagForName(gl.getInf(GameList.TITLE, i))
 										+ getFlagStringId(i), getFlagId(i)));
 
-						// names.add(gl.getInf(GameList.TITLE, i));
-
 						index.add(j, i);
 						j++;
 					}
@@ -501,14 +468,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 								getHtmlTagForName(gl.getInf(GameList.TITLE, i))
 										+ getFlagStringId(i), getFlagId(i)));
 
-						// names.add(gl.getInf(GameList.TITLE, i));
-						// images.add(this.getResources().getDrawable(getFlagId(i)));
 						index.add(j, i);
 						j++;
 					}
 				}
 
-				// //Log.d(Globals.TAG,"Title: "+gl.getInf(GameList.TITLE, i));
 			}
 		}
 
@@ -518,7 +482,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		simpleAdapter.setViewBinder(this);
 		setListAdapter(simpleAdapter);
 		listPosRestore();
-		// getListView().setSelection(2);
+
 		// FIXME android 1.6 refresh bug workaround
 		if (Build.VERSION.SDK_INT == Build.VERSION_CODES.DONUT) {
 			setTabsG();
@@ -558,7 +522,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	private void listDownload() {
 		dialog.setMessage(getString(R.string.init));
-		// listPosClear();
 		ShowDialog();
 		fscan = true;
 		new XmlDownloader(this, dialog, listNo);
@@ -578,8 +541,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 				index.get(item_index)), gl.getInf(GameList.NAME,
 				index.get(item_index)), dialog);
 
-		// Toast.makeText(this, gl.getInf(GameList.TITLE, index[item_index] ),
-		// Toast.LENGTH_LONG).show();
 	}
 
 	public void listIsDownload() {
@@ -594,7 +555,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 		dwn = false;
 		isdwn = false;
-		// listUpdate();
+
 		downloader = null;
 		try {
 			Toast.makeText(
@@ -697,7 +658,16 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 		};
 
+		
+		
 		String s = gl.getInf(GameList.SIZE, index.get(item_index));
+	
+		//FIXME workaround for size of URQ module
+		if(listNo==Globals.BASIC){
+			if(item_index==gl.getIndexOfURQ()) s = gl.getInf(GameList.SIZE, item_index);
+		}
+		
+		
 		if (s == null)
 			s = getString(R.string.na);
 
@@ -743,9 +713,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 			String game = gl.getInf(GameList.NAME, index.get(item_index));
 			String title = gl.getInf(GameList.TITLE, index.get(item_index));
-			// FIXME
+			if(!isURQ(title)) return;
 			lastGame.setLast(title, game);
-
 			Intent myIntent = new Intent(this, SDLActivity.class);
 			Bundle b = new Bundle();
 			b.putString("game", game);
@@ -792,7 +761,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 				dialog.dismiss();
 			}
 
-			// FIXME
+			// FIXME hz
 			if (isdwn) {
 				gameIsDownload();
 			}
@@ -890,4 +859,29 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listPosRestore();
 	}
 
+	
+
+	private boolean isURQ(String s){
+		Matcher m = Pattern.compile(Globals.StringURQ+"*").matcher(s);
+		if(m.find()){
+			if((new File(Globals.getGamePath(Globals.DirURQ))).isDirectory()){
+				return true;
+			} else {
+				Toast.makeText(
+						this,
+						getString(R.string.nourq),
+						Toast.LENGTH_LONG).show();
+						int pos = gl.getIndexOfURQ();
+						if(pos<0) return false;
+						item_index = pos;
+						g = gl.getInf(GameList.TITLE, item_index);
+						gameDownload();
+				return false;
+				
+			}
+			
+		}
+		return true;
+	}
+	
 }

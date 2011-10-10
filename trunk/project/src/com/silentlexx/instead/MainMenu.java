@@ -61,12 +61,8 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		dialog.setMessage(getString(R.string.init));
 		dialog.setIndeterminate(true);
 		dialog.setCancelable(false);
-
-		View header = getLayoutInflater().inflate(R.layout.mnhead, null);
-		// View button = getLayoutInflater().inflate(R.layout.gmbtn1, null);
+        setContentView(R.layout.mnhead);
 		listView = getListView();
-		listView.addHeaderView(header);
-		// listView.addFooterView(footer);
 		listView.setBackgroundColor(Color.BLACK);
 		listView.setBackgroundDrawable(this.getResources().getDrawable(
 				R.drawable.wallpaper));
@@ -124,30 +120,28 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id) {
 		super.onListItemClick(l, v, position, id);
-		if (position > 0) {
-
 			switch (position) {
-			case 1:
+			case 0:
 				startApp();
 				break;
-			case 2:
+			case 1:
 				startGM();
 				break;
-			case 3:
+			case 2:
 				startOpt();
 				break;
-			case 5:
+			case 4:
 				showAboutInstead();
 				break;
-			case 4:
+			case 3:
 				openMarket();
 				break;
 			}
 
-		}
-
 	}
 
+
+	
 	private void openMarket(){
 		String url = "market://details?id=com.silentlexx.instead";
 		Intent i = new Intent(Intent.ACTION_VIEW);

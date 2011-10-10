@@ -92,4 +92,5 @@
     <string name="optwhat">Звук и шрифт</string>
     <string name="marketon">Оценить, написать коментарий</string>
     <string name="market">Instead на Маркет</string>
+    <string name="nourq">URQ модуль не установлен!</string>
 </resources>
