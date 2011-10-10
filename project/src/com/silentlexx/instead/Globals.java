@@ -23,6 +23,8 @@ class Globals {
 	public static final String DataFlag = ".version";
 	public static final String LastGameOpt = "lastgame.dat";
 	public static final String TutorialGame = "tutorial3";
+	public static final String DirURQ = "urq";
+	public static final String StringURQ = "\\[URQ\\]";
 	public static final int BASIC = 1;
 	public static final int ALTER = 2;
 
@@ -38,7 +40,10 @@ class Globals {
 		return android.os.Environment.getExternalStorageDirectory().toString()+"/";
 	}
 
-
+	public static String getGamePath(String f){
+		return getOutFilePath(GameDir+f);
+	}
+	
 	public static String getAutoSavePath(String f){
 		return getOutFilePath(SaveDir+f+"/autosave");
 	}
