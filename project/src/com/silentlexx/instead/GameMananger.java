@@ -22,6 +22,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
@@ -111,8 +112,50 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 		});
 
+		
+		listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+		    @Override
+		    public boolean onItemLongClick(AdapterView<?> av, View v, int pos, long id) {
+				//super.onItemLongClick(av, v, pos, id);
+				if (pos > 0 && !lwhack) {
+					item_index = pos - 1;
+					g = gl.getInf(GameList.TITLE, index.get(item_index));
+					lwhack = true;
+					openCtxMenu();
+				}
+				return true;
+		    }
+		});
+
+		
+		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+		    @Override
+		    public void onItemClick(AdapterView<?> av, View v, int pos, long id) {
+				if (pos > 0 && !lwhack) {
+					item_index = pos - 1;
+					g = gl.getInf(GameList.TITLE, index.get(item_index));
+					openGame();
+				}		    	
+		    }
+		});
+
 	}
 
+	private void openGame(){
+		if (gl.getFlag(index.get(item_index)) == GameList.INSTALLED ||
+				gl.getFlag(index.get(item_index)) == GameList.UPDATE	) {
+			startApp();
+			} else {
+			gameDownload();
+			}
+		
+		
+	}
+	
+	private void openCtxMenu(){
+		openContextMenu(this.getListView());		
+	}
+	
 	private void setTabsG() {
 		switch (listNo) {
 		case Globals.BASIC:
@@ -202,6 +245,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 	}
 
+	/*
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id) {
 		super.onListItemClick(l, v, position, id);
@@ -213,6 +257,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			openContextMenu(v);
 		}
 	}
+	*/
+	
+
 
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v,
