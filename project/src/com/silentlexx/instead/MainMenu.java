@@ -393,6 +393,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			}
 		} else {
 			(new File(Globals.getOutFilePath(Globals.Options))).delete();
+			lastGame.removeLast();
 			loadData();
 		}
 
