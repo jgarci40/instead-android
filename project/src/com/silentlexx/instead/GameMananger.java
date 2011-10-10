@@ -245,21 +245,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 	}
 
-	/*
-	@Override
-	protected void onListItemClick(ListView l, View v, int position, long id) {
-		super.onListItemClick(l, v, position, id);
-		if (position > 0) {
-			item_index = position - 1;
-			// Log.d(Globals.TAG, "Position item: " + item_index);
-			g = gl.getInf(GameList.TITLE, index.get(item_index));
-			lwhack = true;
-			openContextMenu(v);
-		}
-	}
-	*/
-	
-
 
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v,
