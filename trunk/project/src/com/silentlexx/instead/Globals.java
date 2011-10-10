@@ -28,8 +28,6 @@ class Globals {
 	public static final int BASIC = 1;
 	public static final int ALTER = 2;
 
-	//public static LastGame lastGame;
-	
 	class Lang {
 		public static final String RU = "ru";
 		public static final String EN = "en";

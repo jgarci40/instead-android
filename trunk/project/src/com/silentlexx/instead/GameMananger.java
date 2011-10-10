@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -16,6 +15,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Html;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -56,10 +56,12 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private int toppos;
 	private ListView listView;
 	private LastGame lastGame;
+	private Handler h;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		h = new Handler();
 		index = new ArrayList<Integer>();
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
@@ -624,21 +626,38 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	}
 
-	void Delete() {
-		listPosSave();
-		Globals.delete(new File(Globals.getOutFilePath(Globals.GameDir
-				+ gl.getInf(GameList.NAME, index.get(item_index)))));
-		if(gl.getInf(GameList.NAME, index.get(item_index)).equals(lastGame.getName())){
-			lastGame.removeLast();
+    private Runnable deleteDir = new Runnable() {  
+    	public void run(){
+    		Globals.delete(new File(Globals.getOutFilePath(Globals.GameDir
+    				+ gl.getInf(GameList.NAME, index.get(item_index)))));    		    		
+    		if(gl.getInf(GameList.NAME, index.get(item_index)).equals(lastGame.getName())){
+    			lastGame.removeLast();
+    		}
+    		fscan = true;
+    		listUpdate();
+    		showDeleteMsgDir();
+    	}
+    };
+	
+    
+    private void showDeleteMsgDir(){
+		if (dialog.isShowing()) {
+			dialog.dismiss();
 		}
-		fscan = true;
-		listUpdate();
 		Toast.makeText(
 				this,
 				getString(R.string.delgame) + ": "
 						+ gl.getInf(GameList.TITLE, index.get(item_index)),
-				Toast.LENGTH_LONG).show();
-
+				Toast.LENGTH_LONG).show();    	
+    }
+    
+    private void Delete() {
+		listPosSave();
+		ShowDialog();
+		dialog.setMessage(getString(R.string.deleting));
+		dialog.setCancelable(false);
+		h.removeCallbacks(deleteDir);
+    	h.postDelayed(deleteDir, 100);
 	}
 
 	private void gameDownload() {
