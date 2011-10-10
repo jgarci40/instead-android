@@ -93,4 +93,5 @@
     <string name="marketon">Caso, escribir un comentario</string>
     <string name="market">En cambio en el mercado</string>
     <string name="nourq">URQ módulo no está instalado!</string>
+    <string name="deleting">La eliminación de ...</string>
 </resources>
