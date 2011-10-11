@@ -10,7 +10,7 @@
     <string name="wait">Чакайце ...</string>
     <string name="ready">Гатова</string>
     <string name="agame">Аб гульні</string>
-    <string name="redwn">Пераўсталяваць data-файлы на SD і сцерці налады</string>
+    <string name="redwn">Скінуць налады і \n пераўсталяваць файлы на SD</string>
     <string name="writefile">Запіс файла</string>
     <string name="flage">Вялікі</string>
     <string name="basic">Асноўнай</string>
@@ -94,4 +94,6 @@
     <string name="market">Instead на Маркет</string>
     <string name="nourq">URQ модуль не ўстаноўлены!</string>
     <string name="deleting">Выдаленне ...</string>
+    <string name="resetsd">Гэтая аперацыя скіне налады гульні, пераўсталяваць файлы гульні на SD карце, але не закране вашыя гульні і захавання. Працягнуць?</string>
+    <string name="atention">Увага!</string>
 </resources>

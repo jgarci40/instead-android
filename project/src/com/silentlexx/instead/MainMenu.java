@@ -285,12 +285,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-		case R.id.dwn_menu_btn:
-			lastGame.removeLast();
-			reLoadData();
-			deleteRC();
-			showMenu();
-			break;
 	case R.id.mailme:
 		sendEmail();
 		break;
@@ -305,13 +299,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		dialog.setCancelable(true);
 		dwn = false;
 		Log.e("Instead ERORR: ", s);
-	}
-
-	private void reLoadData() {
-		ShowDialog();
-		dwn = true;
-		dialog.setMessage(getString(R.string.init));
-		new DataDownloader(this, dialog);
 	}
 
 	private void loadData() {
@@ -374,10 +361,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		dialog.show();
 	}
 
-	private void deleteRC() {
-		(new File(Globals.getOutFilePath(Globals.Options))).delete();
-		checkRC();
-	}
 
 	private void checkRC() {
 		if (checkInstall()) {
@@ -388,6 +371,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		} else {
 			(new File(Globals.getOutFilePath(Globals.Options))).delete();
 			lastGame.removeLast();
+			showMenu();
 			loadData();
 		}
 

@@ -10,7 +10,7 @@
     <string name="wait">请稍候...</string>
     <string name="ready">准备好</string>
     <string name="agame">关于游戏</string>
-    <string name="redwn">重新安装在SD和清洁选项的数据文件</string>
+    <string name="redwn">复位和\ n重新安装在SD中的文件</string>
     <string name="writefile">保存文件</string>
     <string name="flage">拉赫</string>
     <string name="basic">原件</string>
@@ -94,4 +94,6 @@
     <string name="market">相反在市场</string>
     <string name="nourq">URQ模块没有安装！</string>
     <string name="deleting">删除...</string>
+    <string name="resetsd">此操作将复位的游戏，重新安装在SD卡上的游戏文件，但不会影响你的游戏并保存。继续吗？</string>
+    <string name="atention">注意！</string>
 </resources>

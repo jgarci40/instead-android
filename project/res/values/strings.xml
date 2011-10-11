@@ -18,7 +18,7 @@
     <string name="menudown">Download game</string>
     <string name="menustart">Start game</string>
     <string name="menuupd">Update game</string>
-    <string name="redwn">Reinstall data-files on SD and clean options</string>
+    <string name="redwn">Reset and \n reinstall the files on the SD</string>
     <string name="installed">Installed</string>
     <string name="filtr">Filter</string>
     <string name="all">All</string>
@@ -94,4 +94,6 @@
     <string name="market">Instead on the Market</string>
     <string name="nourq">URQ module is not installed!</string>
     <string name="deleting">Removing ...</string>
+    <string name="resetsd">This operation will reset the game, reinstall the game files on the SD card, but will not affect your game and save. Continue anyway?</string>
+    <string name="atention">Attention!</string>
 </resources>

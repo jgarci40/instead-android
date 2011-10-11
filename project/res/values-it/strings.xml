@@ -10,7 +10,7 @@
     <string name="wait">Attendere prego ...</string>
     <string name="ready">Pronto</string>
     <string name="agame">A proposito di gioco</string>
-    <string name="redwn">Reinstallare i file di dati su schede SD e le opzioni di pulizia</string>
+    <string name="redwn">Reset e \n reinstallare i file sulla scheda SD</string>
     <string name="writefile">Salvare il file</string>
     <string name="flage">Lage</string>
     <string name="basic">Originale</string>
@@ -94,4 +94,6 @@
     <string name="market">Invece sul mercato</string>
     <string name="nourq">URQ modulo non è installato!</string>
     <string name="deleting">Rimozione ...</string>
+    <string name="resetsd">Questa operazione si resetta il gioco, reinstallare i file del gioco sulla scheda SD, ma non influenzare il tuo gioco e salvare. Continua comunque?</string>
+    <string name="atention">Attenzione!</string>
 </resources>

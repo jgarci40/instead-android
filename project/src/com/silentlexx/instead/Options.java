@@ -11,9 +11,14 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 //import android.util.Log;
 import android.view.ContextMenu;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -28,9 +33,8 @@ public class Options extends Activity {
 	final static int VLAGE = 20;
 	private int fsize;
 	private boolean is_f = false;
-	private Button cancel;
-	private Button save;
 	private Button sfont;
+	private Button reset;
 	private CheckBox music;
 	private CheckBox click;
 	private CheckBox ourtheme;
@@ -40,8 +44,16 @@ public class Options extends Activity {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.options);
-		
-		
+
+		reset = (Button) findViewById(R.id.reset);
+
+		reset.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View arg0) {
+				resetCfgDialog();
+			}
+		});
 
 		sfont = (Button) findViewById(R.id.sfont);
 
@@ -55,26 +67,6 @@ public class Options extends Activity {
 
 		this.registerForContextMenu(sfont);
 		
-		save = (Button) findViewById(R.id.save);
-
-		save.setOnClickListener(new View.OnClickListener() {
-
-			@Override
-			public void onClick(View arg0) {
-				rewriteRC();
-				finish();
-			}
-		});
-
-		cancel = (Button) findViewById(R.id.cancel);
-
-		cancel.setOnClickListener(new View.OnClickListener() {
-
-			@Override
-			public void onClick(View arg0) {
-				finish();
-			}
-		});
 
 		music = (CheckBox) findViewById(R.id.music);
 		click = (CheckBox) findViewById(R.id.click);
@@ -82,6 +74,26 @@ public class Options extends Activity {
 
 	}
 
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.opmenu1, menu);
+		return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+	case R.id.saveopt:
+		rewriteRC();
+		finish();
+		break;
+	case R.id.cancelopt:
+		finish();
+		break;
+	}		
+		return true;
+	}
 	
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v,
@@ -137,6 +149,40 @@ public class Options extends Activity {
 		readRC();
 		// Log.d(Globals.TAG, "Option: Resume");
 	}
+	
+	
+	private void resetCfgDialog(){
+		DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				switch (which) {
+				case DialogInterface.BUTTON_POSITIVE:
+						deleteCfg();
+					break;
+
+				case DialogInterface.BUTTON_NEGATIVE:
+
+					break;
+				}
+			}
+		};
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setIcon(R.drawable.warning);
+		builder.setTitle(getString(R.string.atention));
+		builder.setMessage(getString(R.string.resetsd))
+				.setPositiveButton(getString(R.string.yes), dialogClickListener)
+				.setNegativeButton(getString(R.string.no), dialogClickListener)
+				.show();
+
+	}
+	
+	private void deleteCfg(){
+		(new File(Globals.getOutFilePath(Globals.DataFlag))).delete();
+		(new File(Globals.getOutFilePath(Globals.Options))).delete();
+		finish();
+	}
+	
 
 	private void readRC() {
 		String path = Globals.getOutFilePath(Globals.Options);
@@ -253,4 +299,12 @@ public class Options extends Activity {
 
 	}
 
+	   @Override
+	   public boolean onKeyDown(int keyCode, KeyEvent event)  {
+	       if (keyCode == KeyEvent.KEYCODE_BACK) {
+	    		rewriteRC();   
+	       }
+	       return super.onKeyDown(keyCode, event);
+	   }
+	
 }
