@@ -6,7 +6,7 @@
 			<LinearLayout android:id="@+id/Linear09"
 				android:layout_width="fill_parent" android:layout_height="wrap_content"
 				android:orientation="horizontal" android:layout_gravity="center"
-				android:layout_marginBottom="15dip" android:background="@drawable/bgstripe">
+				android:background="@drawable/bgstripe">
 
 				<ImageView android:src="@drawable/options"
 					android:adjustViewBounds="true" android:id="@+id/logo"
@@ -23,18 +23,13 @@
 			</LinearLayout>
 
 	<ScrollView android:id="@+id/ScrollView01"
-		android:layout_width="fill_parent" android:layout_height="fill_parent"
-		android:layout_marginBottom="60dip">
-		<LinearLayout android:id="@+id/llb" android:layout_width="fill_parent"
-			xmlns:android="http://schemas.android.com/apk/res/android"
-			android:orientation="vertical" android:gravity="center"
-			android:layout_height="fill_parent">
+		android:layout_width="fill_parent" android:layout_height="fill_parent">
+		<LinearLayout android:id="@+id/llb" android:orientation="vertical" android:gravity="center" android:layout_height="fill_parent" android:layout_width="fill_parent">
 
 
 
 			<TableLayout android:id="@+id/Linear03"
-				android:layout_width="fill_parent" android:layout_height="fill_parent"
-				android:orientation="horizontal">
+				android:layout_width="fill_parent" android:orientation="horizontal" android:layout_height="fill_parent">
 
 				<TableRow android:gravity="center"  android:layout_marginBottom="20dip">
 				
@@ -71,6 +66,18 @@
 						android:textSize="15sp" android:textColor="#CCCCCC"
 						android:layout_height="wrap_content" android:layout_width="wrap_content" android:gravity="center"></TextView>
 				</TableRow>
+
+				<TableRow android:layout_width="fill_parent" android:layout_height="match_parent" android:layout_marginBottom="30dip"></TableRow>
+
+				<TableRow android:gravity="center">
+					<Button android:text="@string/redwn"
+						android:layout_width="wrap_content" android:layout_height="wrap_content"
+						android:id="@+id/reset" android:textSize="16sp"></Button>
+
+
+				</TableRow>
+
+
 			</TableLayout>
 
 
@@ -80,19 +87,5 @@
 
 
 	</ScrollView>
-	<LinearLayout android:id="@+id/LinearLayout11"
-		android:layout_width="fill_parent" android:layout_gravity="center"
-		android:layout_marginTop="-60dip" android:gravity="center"
-		android:layout_height="fill_parent" android:background="@drawable/bgstripe">
-
-		<Button android:drawableLeft="@drawable/save" android:text="@string/save"
-			android:id="@+id/save" android:textSize="20sp"
-			android:layout_marginRight="20dip" android:layout_height="fill_parent"
-			android:layout_width="150dip"></Button>
-		<Button android:drawableLeft="@drawable/cancel" android:text="@string/cancel"
-			android:id="@+id/cancel" android:textSize="20sp"
-			android:layout_height="fill_parent" android:layout_width="150dip"></Button>
-
-	</LinearLayout>
 
 </LinearLayout>

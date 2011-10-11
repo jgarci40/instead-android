@@ -351,15 +351,16 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	private int getFlagId(int i) {
 
-		if (gl.getInf(GameList.NAME, i).equals(lastGame.getName())) {
-			return R.drawable.start;
-		}
+
 
 		switch (gl.getFlag(i)) {
 		case GameList.NEW:
 			return R.drawable.newinstall;
 
 		case GameList.INSTALLED:
+			if (gl.getInf(GameList.NAME, i).equals(lastGame.getName())) {
+				return R.drawable.lastgame;
+			}
 			return R.drawable.installed;
 
 		case GameList.UPDATE:
