@@ -6,7 +6,7 @@ class Globals {
 
 	public static final String ApplicationName = "Instead";
 
-	public static final String AppVer = "1.5.2.0 test build 2";
+	public static final String AppVer = "1.5.2.0 test build 3";
 
 	//public static final String TAG = "LEXX_Activity";
 

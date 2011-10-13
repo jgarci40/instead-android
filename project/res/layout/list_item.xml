@@ -2,10 +2,9 @@
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/list_text"
     android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
     android:textAppearance="?android:attr/textAppearanceLarge"
     android:gravity="center_vertical"
     android:paddingLeft="5dip"
     android:minHeight="?android:attr/listPreferredItemHeight"
     android:drawableLeft="@drawable/newinstall"
-    android:drawablePadding="10dip" android:background="@drawable/listbg"/>
+    android:drawablePadding="10dip" android:layout_height="80dip"/>

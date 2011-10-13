@@ -181,7 +181,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	private void setTabs() {
-
+		
 		switch (listNo) {
 		case Globals.BASIC:
 			basic_btn.setTextColor(Color.rgb(0, 0, 0));
