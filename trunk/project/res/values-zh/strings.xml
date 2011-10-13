@@ -13,7 +13,7 @@
     <string name="redwn">复位和\ n重新安装在SD中的文件</string>
     <string name="writefile">保存文件</string>
     <string name="flage">拉赫</string>
-    <string name="basic">原件</string>
+    <string name="basic">官方</string>
     <string name="repo">游戏名单</string>
     <string name="conferror">屏幕分辨率是错的！再次尝试重新配置！</string>
     <string name="writefileerorr">文件保存错误</string>
@@ -73,7 +73,7 @@
     <string name="menunewstart">开始新游戏</string>
     <string name="vsmall">非常小的</string>
     <string name="fvlage">非常拉赫</string>
-    <string name="alter">替代</string>
+    <string name="alter">不是官方</string>
     <string name="delrc">设置删除！</string>
     <string name="yes">没错！</string>
     <string name="gmlist">游戏列表</string>

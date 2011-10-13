@@ -6,7 +6,7 @@
 			<LinearLayout android:id="@+id/Linear09"
 				android:layout_width="fill_parent" android:layout_height="wrap_content"
 				android:orientation="horizontal" android:layout_gravity="center"
-				android:background="@drawable/bgstripe">
+				android:background="@drawable/header">
 
 				<ImageView android:src="@drawable/options"
 					android:adjustViewBounds="true" android:id="@+id/logo"

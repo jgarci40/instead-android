@@ -29,9 +29,9 @@
     <string name="gdwncompl">Game downloaded</string>
     <string name="delgame">Game removed</string>
     <string name="wait">Please wait...</string>
-    <string name="basic">Original</string>
+    <string name="basic">Official</string>
     <string name="repo">List of games</string>
-    <string name="alter">Alternative</string>
+    <string name="alter">Not official</string>
     <string name="options">Settings</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>

@@ -13,7 +13,7 @@
     <string name="redwn">Скінуць налады і \n пераўсталяваць файлы на SD</string>
     <string name="writefile">Запіс файла</string>
     <string name="flage">Вялікі</string>
-    <string name="basic">Асноўнай</string>
+    <string name="basic">Афіцыйны</string>
     <string name="repo">Выбар спісу гульняў</string>
     <string name="conferror">Ня правельно вызначана дазвол экрана! Паспрабуйце перастварыць налады!</string>
     <string name="writefileerorr">Памылка запісу файла</string>
@@ -73,7 +73,7 @@
     <string name="menunewstart">Пачаць новую гульню</string>
     <string name="vsmall">Вельмі маленькі</string>
     <string name="fvlage">Вельмі вялікі</string>
-    <string name="alter">Альтэрнатыўны</string>
+    <string name="alter">Не афіцыйны</string>
     <string name="delrc">Налады выдаленыя</string>
     <string name="yes">Ды</string>
     <string name="gmlist">Спіс гульняў</string>

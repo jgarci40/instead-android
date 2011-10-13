@@ -13,7 +13,7 @@
     <string name="redwn">Reset e \n reinstallare i file sulla scheda SD</string>
     <string name="writefile">Salvare il file</string>
     <string name="flage">Lage</string>
-    <string name="basic">Originale</string>
+    <string name="basic">Ufficiale</string>
     <string name="repo">Lista dei giochi</string>
     <string name="conferror">Risoluzione dello schermo è sbagliata! Provare a riconfigurare di nuovo!</string>
     <string name="writefileerorr">Salvataggio del file errore</string>
@@ -73,7 +73,7 @@
     <string name="menunewstart">Inizia nuovo gioco</string>
     <string name="vsmall">Molto piccolo</string>
     <string name="fvlage">Molto lage</string>
-    <string name="alter">Alternativa</string>
+    <string name="alter">Non ufficiale</string>
     <string name="delrc">Impostazioni cancellato!</string>
     <string name="yes">Sì!</string>
     <string name="gmlist">Gioco lista</string>
