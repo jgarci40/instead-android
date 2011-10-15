@@ -96,4 +96,5 @@
     <string name="deleting">Removing ...</string>
     <string name="resetsd">This operation will reset the game, reinstall the game files on the SD card, but will not affect your game and save. Continue anyway?</string>
     <string name="atention">Attention!</string>
+    <string name="scroff">Keep the screen turned</string>
 </resources>

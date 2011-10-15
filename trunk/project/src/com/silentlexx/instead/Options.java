@@ -38,7 +38,8 @@ public class Options extends Activity {
 	private CheckBox music;
 	private CheckBox click;
 	private CheckBox ourtheme;
-
+	private CheckBox scroff;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -71,7 +72,8 @@ public class Options extends Activity {
 		music = (CheckBox) findViewById(R.id.music);
 		click = (CheckBox) findViewById(R.id.click);
 		ourtheme = (CheckBox) findViewById(R.id.ourtheme);
-
+		scroff = (CheckBox) findViewById(R.id.scroff);
+		
 	}
 
 	@Override
@@ -99,8 +101,10 @@ public class Options extends Activity {
 	public void onCreateContextMenu(ContextMenu menu, View v,
 			ContextMenuInfo menuInfo) {
 		super.onCreateContextMenu(menu, v, menuInfo);
-
-		menu.add(0, v.getId(), 0, getString(R.string.vsmall));
+				
+				menu.setHeaderTitle(getString(R.string.fontsize));
+		
+				menu.add(0, v.getId(), 0, getString(R.string.vsmall));
 		
 				menu.add(0, v.getId(), 0, getString(R.string.fsmall));
 
@@ -185,6 +189,15 @@ public class Options extends Activity {
 	
 
 	private void readRC() {
+		File sf = new File(getFilesDir() + Globals.ScreenOffFlag); 
+		
+		if(sf.exists()){
+			scroff.setChecked(false);
+		} else {
+			scroff.setChecked(true);
+		}
+		
+		
 		String path = Globals.getOutFilePath(Globals.Options);
 		BufferedReader input = null;
 		try {
@@ -235,6 +248,20 @@ public class Options extends Activity {
 	}
 
 	private void rewriteRC() {
+		File sf = new File(getFilesDir() + Globals.ScreenOffFlag);
+		
+		if(scroff.isChecked()){
+			sf.delete();			
+		} else {
+			try {
+   	    		sf.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    		
+		}
+		
 		String path = Globals.getOutFilePath(Globals.Options);
 		String rc = "";
 		BufferedReader input = null;

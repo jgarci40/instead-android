@@ -6,7 +6,7 @@ class Globals {
 
 	public static final String ApplicationName = "Instead";
 
-	public static final String AppVer = "1.5.2.0 test build 3";
+	public static final String AppVer = "1.5.2.0";
 
 	//public static final String TAG = "LEXX_Activity";
 
@@ -22,6 +22,7 @@ class Globals {
 	public static final String GameFlags = ".gameflags";
 	public static final String DataFlag = ".version";
 	public static final String LastGameOpt = "lastgame.dat";
+	public static final String ScreenOffFlag = ".screenoff";
 	public static final String TutorialGame = "tutorial3";
 	public static final String DirURQ = "urq";
 	public static final String StringURQ = "\\[URQ\\]";

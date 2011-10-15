@@ -96,4 +96,5 @@
     <string name="deleting">删除...</string>
     <string name="resetsd">此操作将复位的游戏，重新安装在SD卡上的游戏文件，但不会影响你的游戏并保存。继续吗？</string>
     <string name="atention">注意！</string>
+    <string name="scroff">保持屏幕开启</string>
 </resources>

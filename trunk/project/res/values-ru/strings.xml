@@ -91,9 +91,10 @@
     <string name="gmwhat">Установка и запуск игр</string>
     <string name="optwhat">Звук и шрифт</string>
     <string name="marketon">Оценить, написать коментарий</string>
-    <string name="market">Instead на Маркет</string>
+    <string name="market">Instead на Маркете</string>
     <string name="nourq">URQ модуль не установлен!</string>
     <string name="deleting">Удаление...</string>
     <string name="resetsd">Эта операция сбросит настройки игры, переустановит файлы игры на SD карте, но не затронет ваши игры и сохранения. Продолжить?</string>
     <string name="atention">Внимание!</string>
+    <string name="scroff">Держать экран включенным</string>
 </resources>
