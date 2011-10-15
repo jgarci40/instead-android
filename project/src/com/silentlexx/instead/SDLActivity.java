@@ -1,9 +1,10 @@
 package com.silentlexx.instead;
 
+import java.io.File;
+
 import javax.microedition.khronos.egl.EGLConfig;
 
 import javax.microedition.khronos.egl.*;
-
 import android.app.*;
 import android.content.*;
 import android.view.*;
@@ -16,18 +17,24 @@ import android.media.*;
  * SDL Activity
  */
 public class SDLActivity extends Activity {
-
+	final static int WAIT = 100;
+	final static int KOLL = 10;
+	
 	// Main components
 	private static SDLActivity mSingleton;
 	private static SDLSurface mSurface;
 	private static Display display;
+	private static BroadcastReceiver mReceiver;
 	
 	// Audio
 	private static Thread mAudioThread;
 	private static AudioTrack mAudioTrack;
 	
 	private static String game = null;
+	private static int i_s = KOLL;
 	
+	private static Handler h;
+
 	// Load the .so
 	static {
 		System.loadLibrary("SDL");
@@ -49,7 +56,15 @@ public class SDLActivity extends Activity {
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,
 				Globals.ApplicationName);
-				
+
+		h = new Handler();
+		
+		IntentFilter filter = new IntentFilter(Intent.ACTION_USER_PRESENT);
+		//filter.addAction(Intent.ACTION_SCREEN_OFF);
+		//filter.addAction(Intent. ACTION_SCREEN_ON);
+		mReceiver= new ScreenReceiver();
+		registerReceiver(mReceiver, filter);
+		
 		Bundle b = getIntent().getExtras();
 		if(b!=null){
 			game = b.getString("game");
@@ -68,23 +83,88 @@ public class SDLActivity extends Activity {
 
 	}
 
-	// Events
+	public class ScreenReceiver extends	BroadcastReceiver {
+		
+	@Override
+	public void onReceive(Context context, Intent intent){
+	/*	
+		if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)){
+			Log.d("DUBUG", "InMethod: ACTION_SCREEN_OFF"); 
+	    }			 
+		if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)){
+			Log.d("DUBUG","In Method: ACTION_SCREEN_ON");
+		}
+	*/ 
+		if(intent.getAction().equals(Intent.ACTION_USER_PRESENT)){
+			i_s = KOLL;
+			refreshHack();
+		}
+	}
+
+	}
+	
+	@Override
+	public	void onDestroy(){ 
+	super.onDestroy();
+	//Log.d("DUBUG","In Method: onDestroy()"); 
+	if(mReceiver!=null){
+		unregisterReceiver(mReceiver);
+		mReceiver=null;
+		}
+	}
+	
+	
 	@Override
 	protected void onPause() {
 		// Log.v("SDL", "onPause()");
 		nativeSave();
-		wakeLock.release();
+		if(isLocked())wakeLock.release();
 		super.onPause();
 	}
 
 	@Override
 	protected void onResume() {
-		// Log.v("SDL", "onResume()");
 		super.onResume();
-		wakeLock.acquire();
-
+		if(isLocked())wakeLock.acquire();
+	}
+	
+	public static void refreshOff(){
+		i_s=0;
 	}
 
+
+//	public static native void nativeRefresh();
+	
+	private Runnable keySend = new Runnable(){
+		public void run(){
+
+			//FIXME Заменить на нативный метод из самого инстеда	
+			//	nativeRefresh();
+			//onNativeKeyDown(KeyEvent.KEYCODE_SHIFT_LEFT);
+			onNativeTouch(0, 0, 0, 0);
+			onNativeTouch(1, 0, 0, 0);
+			
+			//Log.d("REFRESH", "send key "+Integer.toString(i_s));
+			
+			i_s-- ;
+			if(i_s > 0) refreshHack();
+		}
+	};
+	
+	private void refreshHack() {
+		h.removeCallbacks(keySend);
+		h.postDelayed(keySend,WAIT);
+	}
+	
+	private boolean isLocked(){
+		if((new File(getFilesDir() + Globals.ScreenOffFlag)).exists()){
+			return false;
+		} else {
+		return true;
+		}
+	}
+	
+	
 	// Messages from the SDLMain thread
 	static int COMMAND_CHANGE_TITLE = 1;
 
@@ -130,7 +210,7 @@ public class SDLActivity extends Activity {
 	public static native void nativeSave();
 
 	public static native void nativeStop();
-	
+
 
 	private PowerManager.WakeLock wakeLock = null;
 
@@ -483,7 +563,7 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
 	// Key events
 	public boolean onKey(View v, int keyCode, KeyEvent event) {
-
+		SDLActivity.refreshOff();
 		int key;
 		switch (keyCode) {
 		// case KeyEvent.KEYCODE_BACK: key = KeyEvent.KEYCODE_0; break;
@@ -500,7 +580,6 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
 		if (event.getAction() == KeyEvent.ACTION_DOWN) {
 			// Log.v("SDL", "key down: " + keyCode);
-
 			SDLActivity.onNativeKeyDown(key);
 			return true;
 		} else if (event.getAction() == KeyEvent.ACTION_UP) {
@@ -515,15 +594,18 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
 	// Touch events
 	public boolean onTouch(View v, MotionEvent event) {
-
+		SDLActivity.refreshOff();
 		int action = event.getAction();
 		float x = event.getX();
 		float y = event.getY();
 		float p = event.getPressure();
 
+		//Log.d("touch", Integer.toString(action)+"  "+Float.toString(p));
 		// TODO: Anything else we need to pass?
 		SDLActivity.onNativeTouch(action, x, y, p);
 		return true;
 	}
+	
 
+	
 }
