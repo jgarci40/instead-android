@@ -1,9 +1,6 @@
 package com.silentlexx.instead;
 
 import java.io.File;
-
-import javax.microedition.khronos.egl.EGLConfig;
-
 import javax.microedition.khronos.egl.*;
 import android.app.*;
 import android.content.*;
@@ -19,6 +16,7 @@ import android.media.*;
 public class SDLActivity extends Activity {
 	final static int WAIT = 100;
 	final static int KOLL = 10;
+	private boolean first_run = true;
 	
 	// Main components
 	private static SDLActivity mSingleton;
@@ -64,14 +62,16 @@ public class SDLActivity extends Activity {
 		//filter.addAction(Intent. ACTION_SCREEN_ON);
 		mReceiver= new ScreenReceiver();
 		registerReceiver(mReceiver, filter);
+		display = getWindowManager().getDefaultDisplay();
 		
+		//if(first_run){
+		first_run=false;
+		Log.v("SDL", "onCreate()");		
 		Bundle b = getIntent().getExtras();
 		if(b!=null){
 			game = b.getString("game");
 		}
-		
-		display = getWindowManager().getDefaultDisplay();
-		
+			
 		// So we can call stuff from static callbacks
 		mSingleton = this;
 
@@ -80,9 +80,21 @@ public class SDLActivity extends Activity {
 		setContentView(mSurface);
 		SurfaceHolder holder = mSurface.getHolder();
 		holder.setType(SurfaceHolder.SURFACE_TYPE_GPU);
-
+		//}
 	}
 
+	@Override
+	public void onSaveInstanceState(Bundle savedInstanceState) {
+		savedInstanceState.putBoolean("first_run", first_run);
+		super.onSaveInstanceState(savedInstanceState);
+	}
+
+	@Override
+	public void onRestoreInstanceState(Bundle savedInstanceState) {
+		super.onRestoreInstanceState(savedInstanceState);
+		first_run = savedInstanceState.getBoolean("first_run");
+	}
+	
 	public class ScreenReceiver extends	BroadcastReceiver {
 		
 	@Override
@@ -116,9 +128,11 @@ public class SDLActivity extends Activity {
 	
 	@Override
 	protected void onPause() {
-		// Log.v("SDL", "onPause()");
 		nativeSave();
 		if(isLocked())wakeLock.release();
+		 Log.v("SDL", "onPause()");
+		//if(!first_run) mSurface.suspend();
+	    //mSurface = null;
 		super.onPause();
 	}
 
@@ -126,6 +140,8 @@ public class SDLActivity extends Activity {
 	protected void onResume() {
 		super.onResume();
 		if(isLocked())wakeLock.acquire();
+		 Log.v("SDL", "onResume()");
+		// if(!first_run) mSurface.resume();
 	}
 	
 	public static void refreshOff(){
@@ -143,6 +159,7 @@ public class SDLActivity extends Activity {
 			//onNativeKeyDown(KeyEvent.KEYCODE_SHIFT_LEFT);
 			onNativeTouch(0, 0, 0, 0);
 			onNativeTouch(1, 0, 0, 0);
+			//mSurface.flipEGL();
 			
 			//Log.d("REFRESH", "send key "+Integer.toString(i_s));
 			
@@ -177,10 +194,6 @@ public class SDLActivity extends Activity {
 		}
 	};
 	
-	
-	
-	
-
 	// Send a message from the SDLMain thread
 	void sendCommand(int command, Object data) {
 		Message msg = commandHandler.obtainMessage();
@@ -191,24 +204,15 @@ public class SDLActivity extends Activity {
 
 	// C functions we call
 	public static native void nativeInit(String jpath, String jres, String jgame);
-
 	public static native void nativeQuit();
-
 	public static native void onNativeResize(int x, int y, int format);
-
 	public static native void onNativeKeyDown(int keycode);
-
 	public static native void onNativeKeyUp(int keycode);
-
 	public static native void onNativeTouch(int action, float x, float y,
 			float p);
-
 	public static native void onNativeAccel(float x, float y, float z);
-
 	public static native void nativeRunAudioThread();
-
 	public static native void nativeSave();
-
 	public static native void nativeStop();
 
 
@@ -365,13 +369,7 @@ public class SDLActivity extends Activity {
  */
 class SDLMain implements Runnable {
 	public void run() {
-		// Runs SDL_main()
-		
-		// Log.v("SDL", "SDL res "+SDLActivity.res);
-		
 		SDLActivity.nativeInit(Globals.getStorage() + Globals.ApplicationName, SDLActivity.getRes(),SDLActivity.getGame());
-		
-		
 	}
 	
 }
@@ -389,10 +387,21 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 	private Thread mSDLThread;
 
 	// EGL private objects
+	@SuppressWarnings("unused")
 	private EGLContext mEGLContext;
 	private EGLSurface mEGLSurface;
 	private EGLDisplay mEGLDisplay;
 
+/*
+	public void suspend() {
+		mSDLThread.suspend();
+	}
+	
+	public void resume(){
+		mSDLThread.resume();
+	}
+*/
+	
 	// Startup
 	public SDLSurface(Context context) {
 		super(context);
@@ -408,16 +417,10 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
 	// Called when we have a valid drawing surface
 	public void surfaceCreated(SurfaceHolder holder) {
-		// Log.v("SDL", "surfaceCreated()");
-		
-		// enableSensor(Sensor.TYPE_ACCELEROMETER, true);
 	}
 
 	// Called when we lose the surface
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		// Log.v("SDL", "surfaceDestroyed()");
-
-		// Send a quit message to the application
 		SDLActivity.nativeQuit();
 
 		// Now wait for the SDL thread to quit
@@ -428,14 +431,9 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 				Log.v("SDL", "Problem stopping thread: " + e);
 			}
 			mSDLThread = null;
-
-			// Log.v("SDL", "Finished waiting for SDL thread");
 		}
-
-		// enableSensor(Sensor.TYPE_ACCELEROMETER, false);
 	}
 
-	// Called when the surface is resized
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
 		// Log.v("SDL", "surfaceChanged()");
@@ -497,6 +495,8 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 	public void onDraw(Canvas canvas) {
 	}
 
+
+	
 	// EGL functions
 	public boolean initEGL() {
 		Log.v("SDL", "Starting up");
@@ -511,7 +511,7 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 			egl.eglInitialize(dpy, version);
 
 			int[] configSpec = {
-			// EGL10.EGL_DEPTH_SIZE, 16,
+			//EGL10.EGL_DEPTH_SIZE, 8,
 			EGL10.EGL_NONE };
 			EGLConfig[] configs = new EGLConfig[1];
 			int[] num_config = new int[1];
@@ -544,13 +544,10 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 	public void flipEGL() {
 		try {
 			EGL10 egl = (EGL10) EGLContext.getEGL();
-
 			egl.eglWaitNative(EGL10.EGL_NATIVE_RENDERABLE, null);
 
 			// drawing here
-
 			egl.eglWaitGL();
-
 			egl.eglSwapBuffers(mEGLDisplay, mEGLSurface);
 
 		} catch (Exception e) {
@@ -606,6 +603,7 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 		return true;
 	}
 	
+
 
 	
 }
