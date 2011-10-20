@@ -53,9 +53,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
 		lastGame = new LastGame(this);
-		
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
 		dialog.setMessage(getString(R.string.init));
@@ -93,10 +91,10 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				BR+
 				getHtmlTagForSmall(getString(R.string.marketon)),
 				R.drawable.market));
-		listData.add(addListItem(getHtmlTagForName(getString(R.string.app_name))
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.about_btn))
 				+ BR
 				+ getHtmlTagForSmall(getString(R.string.ver) + " "
-						+ Globals.AppVer), R.drawable.info));
+						+ Globals.AppVer(this)), R.drawable.info));
 //		listData.add(addListItem(getHtmlTagForName(getString(R.string.mailme)),
 //				R.drawable.email_go));
 //		listData.add(addListItem(getHtmlTagForName(getString(R.string.exit)),
@@ -333,7 +331,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			line = input.readLine();
 			try {
 				if (line.toLowerCase().matches(
-						"(.*)" + Globals.AppVer.toLowerCase() + "(.*)")) {
+						"(.*)" + Globals.AppVer(this).toLowerCase() + "(.*)")) {
 					input.close();
 					return true;
 				}
@@ -473,7 +471,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setIcon(R.drawable.icon);
-		builder.setTitle(getString(R.string.app_name) + " - " + Globals.AppVer);
+		builder.setTitle(getString(R.string.app_name) + " - " + Globals.AppVer(this));
 		builder.setMessage(getString(R.string.about_instead))
 				.setPositiveButton(getString(R.string.ok), dialogClickListener)
 				.show();

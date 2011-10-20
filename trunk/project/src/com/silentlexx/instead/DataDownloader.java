@@ -127,7 +127,7 @@ class DataDownloader extends Thread {
 		path = Globals.getOutFilePath(Globals.DataFlag);
 
 		OutputStream out = null;
-		byte buff[] = Globals.AppVer.getBytes();
+		byte buff[] = Globals.AppVer(Parent).getBytes();
 		try {
 			out = new FileOutputStream(path);
 			out.write(buff);

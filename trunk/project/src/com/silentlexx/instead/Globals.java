@@ -2,11 +2,24 @@ package com.silentlexx.instead;
 
 import java.io.File;
 
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
+
 class Globals {
 
 	public static final String ApplicationName = "Instead";
-
-	public static final String AppVer = "1.5.2.0";
+	
+	public static String AppVer(Context c) {
+		PackageInfo pi;
+		try {
+			pi = c.getPackageManager().getPackageInfo(c.getPackageName(), 0);
+		} catch (NameNotFoundException e) {
+				e.printStackTrace();
+				return "Not Found";
+		}
+		return pi.versionName;
+	}
 
 	//public static final String TAG = "LEXX_Activity";
 
