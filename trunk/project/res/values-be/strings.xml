@@ -97,4 +97,7 @@
     <string name="resetsd">Гэтая аперацыя скіне налады гульні, пераўсталяваць файлы гульні на SD карце, але не закране вашыя гульні і захавання. Працягнуць?</string>
     <string name="atention">Увага!</string>
     <string name="scroff">Трымаць экран уключаным</string>
+    <string name="start">Пачаць</string>
+    <string name="theme">Тэма:</string>
+    <string name="portrait">Партрэтная арыентацыя экрана</string>
 </resources>

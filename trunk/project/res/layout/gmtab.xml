@@ -28,11 +28,25 @@
 					android:layout_toRightOf="@+id/logo" android:layout_height="wrap_content"
 					android:layout_centerVertical="true" android:textColor="#FFFFFF"
 					android:shadowColor="#000000"></TextView>
-				<Button android:id="@+id/btn_sync"
-					android:layout_alignParentRight="true" android:layout_height="32dip"
-					android:layout_width="32dip" android:layout_centerVertical="true"
+			<LinearLayout  android:layout_height="wrap_content" android:layout_width="wrap_content"
+			    android:layout_alignParentRight="true"	android:layout_centerVertical="true">
+				    
+				<Button android:id="@+id/btn_filtr"
+					android:layout_height="32dip"
+					android:layout_width="32dip" 
+					android:background="@drawable/filter_small"></Button>
+				
+				    <ImageView android:id="@+id/img_filtr"
+				     android:layout_height="32dip"
+					android:layout_width="32dip"  
+					android:src="@drawable/all"
+					android:layout_marginRight="10dip"/>
+				
+				    <Button android:id="@+id/btn_sync"
+					android:layout_height="32dip"
+					android:layout_width="48dip"
 					android:background="@drawable/refresh_small"></Button>
-
+</LinearLayout>
 			</RelativeLayout>
 
 			<LinearLayout android:id="@+id/Linear12"

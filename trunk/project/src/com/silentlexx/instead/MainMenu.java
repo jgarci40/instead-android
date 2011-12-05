@@ -17,6 +17,7 @@ import java.util.Map;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -74,9 +75,13 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private void showMenu(){
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.app_name))+ BR
+				+ getHtmlTagForSmall(getString(R.string.start)),
+				R.drawable.start));
+		
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.run))+ BR
 				+ getHtmlTagForSmall(lastGame.getTitle()),
-				R.drawable.start));
+				R.drawable.lastgame));
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.gmlist))+
 				BR+
 				getHtmlTagForSmall(getString(R.string.gmwhat)),
@@ -120,32 +125,45 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		super.onListItemClick(l, v, position, id);
 			switch (position) {
 			case 0:
-				startApp();
+				startAppAlt();
 				break;
 			case 1:
-				startGM();
+				startApp();
 				break;
 			case 2:
-				startOpt();
-				break;
-			case 4:
-				showAboutInstead();
+				startGM();
 				break;
 			case 3:
+				startOpt();
+				break;
+			case 5:
+				showAboutInstead();
+				break;
+			case 4:
 				openMarket();
 				break;
 			}
+			
 
 	}
 
 
 	
 	private void openMarket(){
+	try {	
 		String url = "market://details?id=com.silentlexx.instead";
 		Intent i = new Intent(Intent.ACTION_VIEW);
 		i.setData(Uri.parse(url));
-		startActivity(i);		
+		startActivity(i);
+	   } catch (ActivityNotFoundException e){
+		   openUrl("https://market.android.com/details?id=com.silentlexx.instead");
+	   }
 	}
+	
+    private void openUrl(String url){
+    	Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+    	startActivity(browserIntent);
+    }
 	
 	private Map<String, ListItem> addListItem(String s, int i) {
 		Map<String, ListItem> iD = new HashMap<String, ListItem>();
@@ -183,6 +201,18 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		checkRC();
 	}
 
+	private void startAppAlt() {
+		if (checkInstall()) {
+			Intent myIntent = new Intent(this, SDLActivity.class);
+			Bundle b = new Bundle();
+			//b.putString("game", lastGame.getName());
+			myIntent.putExtras(b);
+			startActivity(myIntent);
+		} else {
+			checkRC();
+		}
+	}
+	
 	private void startApp() {
 		if (checkInstall()) {
 			Intent myIntent = new Intent(this, SDLActivity.class);
@@ -300,12 +330,10 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	}
 
 	private void loadData() {
-		if (!checkInstall()) {
 			dwn = true;
 			ShowDialog();
 			dialog.setMessage(getString(R.string.init));
 			new DataDownloader(this, dialog);
-		}
 	}
 
 	public boolean checkInstall() {
@@ -364,7 +392,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		if (checkInstall()) {
 			if (!(new File(Globals.getOutFilePath(Globals.Options))).exists()) {
 				CreateRC();
-				;
 			}
 		} else {
 			(new File(Globals.getOutFilePath(Globals.Options))).delete();

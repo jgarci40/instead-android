@@ -97,4 +97,7 @@
     <string name="resetsd">Ця операція скине налаштування гри, переустановить файли гри на SD карті, але не торкнеться ваші ігри та збереження. Продовжити?</string>
     <string name="atention">Увага!</string>
     <string name="scroff">Тримати екран включеним</string>
+    <string name="start">Запустити</string>
+    <string name="theme">Тема:</string>
+    <string name="portrait">Портретна орієнтація екрану</string>
 </resources>

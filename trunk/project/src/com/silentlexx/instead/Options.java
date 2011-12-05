@@ -33,17 +33,21 @@ public class Options extends Activity {
 	final static int VLAGE = 20;
 	private int fsize;
 	private boolean is_f = false;
+	private  LastGame lastGame;
 	private Button sfont;
 	private Button reset;
 	private CheckBox music;
 	private CheckBox click;
 	private CheckBox ourtheme;
 	private CheckBox scroff;
+	private CheckBox portrait;
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
+		lastGame = new LastGame(this);
+		
 		setContentView(R.layout.options);
 
 		reset = (Button) findViewById(R.id.reset);
@@ -73,6 +77,11 @@ public class Options extends Activity {
 		click = (CheckBox) findViewById(R.id.click);
 		ourtheme = (CheckBox) findViewById(R.id.ourtheme);
 		scroff = (CheckBox) findViewById(R.id.scroff);
+		portrait = (CheckBox) findViewById(R.id.portrait);
+		
+		if(lastGame.getOreintation()==Globals.PORTRAIT){
+			portrait.setChecked(true);
+		}
 		
 	}
 
@@ -248,6 +257,13 @@ public class Options extends Activity {
 	}
 
 	private void rewriteRC() {
+		
+	    if(portrait.isChecked()){
+	    	lastGame.setOreintetion(Globals.PORTRAIT);
+	    } else {
+	    	lastGame.setOreintetion(Globals.LANDSCAPE);	
+	    }
+		
 		File sf = new File(getFilesDir() + Globals.ScreenOffFlag);
 		
 		if(scroff.isChecked()){

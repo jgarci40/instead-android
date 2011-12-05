@@ -97,4 +97,7 @@
     <string name="resetsd">Эта операция сбросит настройки игры, переустановит файлы игры на SD карте, но не затронет ваши игры и сохранения. Продолжить?</string>
     <string name="atention">Внимание!</string>
     <string name="scroff">Держать экран включенным</string>
+    <string name="start">Запустить</string>
+    <string name="theme">Тема: </string>
+    <string name="portrait">Портретная ориентация экрана</string>
 </resources>

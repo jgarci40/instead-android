@@ -4,6 +4,7 @@ import java.io.File;
 import javax.microedition.khronos.egl.*;
 import android.app.*;
 import android.content.*;
+import android.content.pm.ActivityInfo;
 import android.view.*;
 import android.os.*;
 import android.util.Log;
@@ -32,7 +33,7 @@ public class SDLActivity extends Activity {
 	private static int i_s = KOLL;
 	
 	private static Handler h;
-
+	private  LastGame lastGame;
 	// Load the .so
 	static {
 		System.loadLibrary("SDL");
@@ -46,7 +47,13 @@ public class SDLActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		// Log.v("SDL", "onCreate()");
 		super.onCreate(savedInstanceState);
-
+		lastGame = new LastGame(this);
+        if (lastGame.getOreintation()==Globals.PORTRAIT) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
+		
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);

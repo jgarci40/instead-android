@@ -97,4 +97,7 @@
     <string name="resetsd">Esta operación va a reiniciar el juego, vuelva a instalar los archivos del juego en la tarjeta SD, pero no afectará a su juego y guardarlo. ¿Desea continuar?</string>
     <string name="atention">¡Atención!</string>
     <string name="scroff">Mantenga la pantalla se volvió</string>
+    <string name="start">Inicio</string>
+    <string name="theme">Tema:</string>
+    <string name="portrait">Retrato orientación de la pantalla</string>
 </resources>
