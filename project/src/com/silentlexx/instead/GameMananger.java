@@ -26,6 +26,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.SimpleAdapter.ViewBinder;
@@ -33,7 +34,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class GameMananger extends ListActivity implements ViewBinder {
-
+	private final int MENU_LIST=1;
+	private final int MENU_FILTER=2;
+	private int menu_mode = MENU_LIST;
 	private int item_index = -1;
 	private String g;
 	private int filter = GameList.ALL;
@@ -51,7 +54,10 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private Button basic_btn;
 	private Button alter_btn;
 	private Button btn_sync;
+	private Button btn_filtr;
+	private ImageView img_filtr;
 	private boolean fscan = false;
+	
 	private int listpos;
 	private int toppos;
 	private ListView listView;
@@ -69,7 +75,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setIndeterminate(true);
 		dialog.setCancelable(false);
         setContentView(R.layout.gmtab);
-		listView = getListView();
+    	lastGame = new LastGame(this);
+        filter = lastGame.getFiltr();
+        listNo = lastGame.getListNo();
+        lang_filter = lastGame.getLang();
+        listView = getListView();
 		listView.setBackgroundColor(Color.BLACK);
 		listView.setBackgroundDrawable(this.getResources().getDrawable(
 				R.drawable.wallpaper));
@@ -81,6 +91,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			@Override
 			public void onClick(View arg0) {
 				listNo = Globals.BASIC;
+				lastGame.setListNo(listNo);
 				listPosClear();
 				setTabs();
 				checkXml();
@@ -94,10 +105,33 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			@Override
 			public void onClick(View arg0) {
 
-				listDownload();
+				listDownload();	
 			}
 		});
 
+		btn_filtr = (Button) findViewById(R.id.btn_filtr);
+
+		btn_filtr.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View arg0) {
+				setFilter();
+			}
+		});
+
+		
+		img_filtr = (ImageView) findViewById(R.id.img_filtr);
+
+		img_filtr.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View arg0) {
+				btn_filtr.performClick();
+			}
+		});
+		
+		setFiltrImg();
+		
 		alter_btn = (Button) findViewById(R.id.alter_btn);
 
 		alter_btn.setOnClickListener(new View.OnClickListener() {
@@ -105,6 +139,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			@Override
 			public void onClick(View arg0) {
 				listNo = Globals.ALTER;
+				lastGame.setListNo(listNo);
 				listPosClear();
 				setTabs();
 				checkXml();
@@ -120,6 +155,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 					item_index = pos;
 					g = gl.getInf(GameList.TITLE, index.get(item_index));
 					lwhack = true;
+					menu_mode = MENU_LIST;
 					openCtxMenu();
 				}
 				return true;
@@ -140,6 +176,14 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	}
 
+	private void setFilter(){
+		lwhack = true;
+		menu_mode = MENU_FILTER;
+		openCtxMenu();		
+	}
+	
+	
+	
 	private void openGame(){
 		if (gl.getFlag(index.get(item_index)) == GameList.INSTALLED ||
 				gl.getFlag(index.get(item_index)) == GameList.UPDATE	) {
@@ -250,6 +294,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			ContextMenuInfo menuInfo) {
 		super.onCreateContextMenu(menu, v, menuInfo);
 		if (lwhack) {
+		
+			if(menu_mode==MENU_LIST){
 			menu.setHeaderTitle(g);
 
 			if (gl.getFlag(index.get(item_index)) == GameList.INSTALLED) {
@@ -276,13 +322,22 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 
 			menu.add(0, v.getId(), 0, getString(R.string.agame));
-
+			} else 
+			if(menu_mode==MENU_FILTER){
+				menu.setHeaderTitle(getString(R.string.filtr));
+				menu.add(0, v.getId(), 0, getString(R.string.all));
+				menu.add(0, v.getId(), 0, getString(R.string.installed));
+				menu.add(0, v.getId(), 0, getString(R.string.isnew));
+				menu.add(0, v.getId(), 0, getString(R.string.isupd));
+			
+			}
 		}
 		lwhack = false;
 	}
 
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
+		// Item options menu
 		if (item.getTitle() == getString(R.string.menustart)) {
 			startApp();
 		} else if (item.getTitle() == getString(R.string.menunewstart)) {
@@ -296,9 +351,41 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		} else if (item.getTitle() == getString(R.string.agame)) {
 			startAbout();
 		} else {
-			return false;
+			//FILTER Menu
+			 if (item.getTitle() == getString(R.string.installed)) {
+				filter = GameList.INSTALLED;
+				lastGame.setFiltr(filter);
+				setFiltrImg();
+				listUpdate();
+			} else if (item.getTitle() == getString(R.string.isnew)) {
+				filter = GameList.NEW;
+				lastGame.setFiltr(filter);
+				setFiltrImg();
+				listUpdate();
+			} else if (item.getTitle() == getString(R.string.isupd)) {
+				filter = GameList.UPDATE;
+				lastGame.setFiltr(filter);
+				setFiltrImg();
+				listUpdate();
+			} else if (item.getTitle() == getString(R.string.all)) {
+				filter = GameList.ALL;
+				lastGame.setFiltr(filter);
+				setFiltrImg();
+				listUpdate();
+			} else	return false;
 		}
 		return true;
+	}
+	
+	private void setFiltrImg(){
+		switch (filter){
+		case GameList.INSTALLED: img_filtr.setImageResource(R.drawable.installed); break;
+		case GameList.ALL: img_filtr.setImageResource(R.drawable.all); break;
+		case GameList.NEW: img_filtr.setImageResource(R.drawable.newinstall); break;
+		case GameList.UPDATE: img_filtr.setImageResource(R.drawable.update); break;
+		default: img_filtr.setImageResource(R.drawable.all);
+		}
+		
 	}
 
 	@Override
@@ -315,33 +402,24 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		case R.id.upd_menu_btn:
 			listDownload();
 			return true;
-		case R.id.inst_menu_btn:
-			filter = GameList.INSTALLED;
-			listUpdate();
-			return true;
-		case R.id.all_menu_btn:
-			filter = GameList.ALL;
-			listUpdate();
-			return true;
-		case R.id.isupd_menu_btn:
-			filter = GameList.UPDATE;
-			listUpdate();
-			return true;
-		case R.id.isnew_menu_btn:
-			filter = GameList.NEW;
-			listUpdate();
+	
+		case R.id.flt_menu_btn:
+				setFilter();
 			return true;
 
 		case R.id.langru_menu_btn:
 			lang_filter = Globals.Lang.RU;
+			lastGame.setLang(lang_filter);
 			listUpdate();
 			return true;
 		case R.id.langen_menu_btn:
 			lang_filter = Globals.Lang.EN;
+			lastGame.setLang(lang_filter);
 			listUpdate();
 			return true;
 		case R.id.langall_menu_btn:
 			lang_filter = Globals.Lang.ALL;
+			lastGame.setLang(lang_filter);
 			listUpdate();
 			return true;
 		default:
@@ -423,7 +501,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	public void listUpdate() {
-		lastGame = new LastGame(this);
+	
 		gl = new GameList(this, getGameListName(listNo), fscan);
 		fscan = false;
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();

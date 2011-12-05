@@ -52,6 +52,11 @@
 						android:textSize="20sp" android:layout_height="65dip" android:layout_width="wrap_content"></CheckBox>
 				</TableRow>
 
+				<TableRow android:gravity="center">
+					<CheckBox android:text="@string/portrait" android:id="@+id/portrait"
+						android:textSize="20sp" android:layout_height="65dip" android:layout_width="wrap_content"></CheckBox>
+				</TableRow>
+				    
 
 				<TableRow android:gravity="center" android:layout_marginTop="10dip">
 					<Button android:text="@string/fontsize"
