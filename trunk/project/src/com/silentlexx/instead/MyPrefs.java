@@ -16,6 +16,10 @@ public class MyPrefs {
 	    ed = pr.edit();
 	}
 	
+	public void  clear(){
+		ed.clear();
+	}
+	
 	public void commit(){
 		ed.commit();
 	}

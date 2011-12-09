@@ -25,11 +25,6 @@ public class LastGame {
 	}
 	
 	public void clearGame(){
- 		/*
-		pr.set("filtr", GameList.ALL);
- 		pr.set("list", Globals.BASIC);		
- 		pr.set("lang", Globals.Lang.ALL);
- 		*/
  		name = Globals.TutorialGame;
  		title = title_def;		
  		Commit();
