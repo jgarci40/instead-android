@@ -98,6 +98,8 @@ public class GameList {
 		lang = new ArrayList<String>();
 		size = new ArrayList<String>();
 				
+	
+		
 		fflags = Parent.getFilesDir()+"/"+f.substring(0, f.length()-3)+"db";
 
 		xml = Parent.getFilesDir()+"/"+f;		

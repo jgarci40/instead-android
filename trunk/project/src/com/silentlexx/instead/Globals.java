@@ -32,6 +32,7 @@ class Globals {
 	public static final String GameDir = "appdata/games/";
 	public static final String SaveDir = "appdata/saves/";
 	public static final String Options = "appdata/insteadrc";
+	public static final String MainLua = "/main.lua";
 	public static final String GameFlags = ".gameflags";
 	public static final String DataFlag = ".version";
 	public static final String LastGameOpt = "lastgame.dat";
@@ -39,6 +40,7 @@ class Globals {
 	public static final String TutorialGame = "tutorial3";
 	public static final String DirURQ = "urq";
 	public static final String StringURQ = "\\[URQ\\]";
+	public static final String PORTRET_KEY = "portrait";
 	public static final int BASIC = 1;
 	public static final int ALTER = 2;
 	public static final int AUTO = 0;
@@ -46,6 +48,8 @@ class Globals {
 	public static final int LANDSCAPE = 2;
 
 	
+	public static String idf = null;
+
 	
 	class Lang {
 		public static final String RU = "ru";

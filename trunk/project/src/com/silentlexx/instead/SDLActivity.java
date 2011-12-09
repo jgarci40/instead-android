@@ -30,6 +30,7 @@ public class SDLActivity extends Activity {
 	private static AudioTrack mAudioTrack;
 	
 	private static String game = null;
+	private static String idf = null;
 	private static int i_s = KOLL;
 	
 	private static Handler h;
@@ -48,7 +49,8 @@ public class SDLActivity extends Activity {
 		// Log.v("SDL", "onCreate()");
 		super.onCreate(savedInstanceState);
 		lastGame = new LastGame(this);
-        if (lastGame.getOreintation()==Globals.PORTRAIT) {
+       // if (lastGame.getOreintation()==Globals.PORTRAIT) {
+		if(Options.isPortrait()){
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -77,8 +79,12 @@ public class SDLActivity extends Activity {
 		Bundle b = getIntent().getExtras();
 		if(b!=null){
 			game = b.getString("game");
+			idf = b.getString("idf");
 		}
-			
+		
+		//if(idf!=null) Log.d("idf", idf);
+		//if(game!=null) Log.d("game", game);
+		
 		// So we can call stuff from static callbacks
 		mSingleton = this;
 
@@ -210,7 +216,7 @@ public class SDLActivity extends Activity {
 	}
 
 	// C functions we call
-	public static native void nativeInit(String jpath, String jres, String jgame);
+	public static native void nativeInit(String jpath, String jres, String jgame, String jidf);
 	public static native void nativeQuit();
 	public static native void onNativeResize(int x, int y, int format);
 	public static native void onNativeKeyDown(int keycode);
@@ -244,6 +250,10 @@ public class SDLActivity extends Activity {
 
 	public static String getGame() {
 		return game;
+	}
+
+	public static String getIdf() {
+		return idf;
 	}
 	
 	
@@ -376,7 +386,7 @@ public class SDLActivity extends Activity {
  */
 class SDLMain implements Runnable {
 	public void run() {
-		SDLActivity.nativeInit(Globals.getStorage() + Globals.ApplicationName, SDLActivity.getRes(),SDLActivity.getGame());
+		SDLActivity.nativeInit(Globals.getStorage() + Globals.ApplicationName, SDLActivity.getRes(),SDLActivity.getGame(), SDLActivity.getIdf());
 	}
 	
 }

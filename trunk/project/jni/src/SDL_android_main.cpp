@@ -19,7 +19,7 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
 // Start up the SDL app
 extern "C" void Java_com_silentlexx_instead_SDLActivity_nativeInit(
-		JNIEnv* env, jclass cls, jstring jpath, jstring jres, jstring jgame) {
+		JNIEnv* env, jclass cls, jstring jpath, jstring jres, jstring jgame, jstring jidf ) {
 
 	/* This interface could expand with ABI negotiation, calbacks, etc. */
 	SDL_Android_Init(env, cls);
@@ -44,35 +44,35 @@ extern "C" void Java_com_silentlexx_instead_SDLActivity_nativeInit(
 		argv[2] = strdup(res);
 		env->ReleaseStringUTFChars(jres, res);
 
-		if (jgame != NULL) {
+		if (jidf != NULL) {
+			const char *idf = env->GetStringUTFChars(jidf, 0);
+			n = 4;
+			argv[3] = strdup(idf);
+			argv[4] = NULL;
+			env->ReleaseStringUTFChars(jidf, idf);
+		} else
+		  if (jgame != NULL) {
 			const char *game = env->GetStringUTFChars(jgame, 0);
 			n = 5;
 			argv[3] = strdup("-game");
 			argv[4] = strdup(game);
 			argv[5] = NULL;
 			env->ReleaseStringUTFChars(jgame, game);
-		} else {
-			argv[3] = NULL;
-		}
+	    	} else {
+		    	argv[3] = NULL;
+	    	}
 
 	} else {
 		argv[1] = NULL;
 	}
-	//__android_log_print(ANDROID_LOG_DEBUG, "LEXX_Activity", "SDL param n %i", n);
-
 
 	status = SDL_main(n, argv);
-
-
-
 
 	int i;
 	for (i = 0; i < n; ++i) {
 		free(argv[i]);
 	}
 
-	//__android_log_print(ANDROID_LOG_DEBUG, "LEXX_Activity", "SDL Exit status %c", status);
-	/* We exit here for consistency with other platforms. */
 	exit(status);
 }
 
