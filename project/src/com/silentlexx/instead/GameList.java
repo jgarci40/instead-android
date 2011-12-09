@@ -4,11 +4,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -23,11 +21,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import android.util.Log;
-
-//import android.util.Log;
-
 public class GameList {
+	private final String LIST_PREFS = Globals.ApplicationName+"-games";
+	private final String LENGTH = "lenght";
 	public static final int INSTALLED = 0;
 	public static final int ALL = 1;
 	public static final int UPDATE = 2;
@@ -51,9 +47,12 @@ public class GameList {
 	protected static final String ITEM_DESCURL = "descurl";
 	protected static final String ITEM_LANG = "lang";
 	protected static final String ITEM_SIZE = "size";
+	protected static final String ITEM_BYTESIZE = "bytesize";
+	protected static final String ITEM_FLAG = "flag";
 	private String na;
 	private boolean ok = false;
-
+	private MyPrefs pr;
+	
 //	protected static final int MAX = 99;
 
 	private String xml;
@@ -82,7 +81,6 @@ public class GameList {
 	
 	private Document document;
 	private GameMananger Parent;
-	private String fflags;
 
 	
 	GameList(GameMananger _parent, String f, boolean fscan) {
@@ -97,75 +95,83 @@ public class GameList {
 		descurl = new ArrayList<String>();
 		lang = new ArrayList<String>();
 		size = new ArrayList<String>();
-				
-	
 		
-		fflags = Parent.getFilesDir()+"/"+f.substring(0, f.length()-3)+"db";
+		String sub = f.substring(0, f.length()-3);
+		
+		pr = new MyPrefs(Parent, LIST_PREFS+sub);
+		
 
-		xml = Parent.getFilesDir()+"/"+f;		
+		xml = Parent.getFilesDir()+"/"+f;
 		
-		ok = readXML();
-		if (isOK()) {
-			parseXML();
-			if (!(new File(fflags)).exists() || fscan){
-				   getFlags();
-				   
-			}
-			setFlags();
-		}		
+		
+		if(!readPrefs() || fscan){
+			createPrefs();
+		}
+    
 	}
 
+	private void createPrefs(){
+		ok = readXML();
+		if (isOK()) {
+		   parseXML();
+		   flagsScan();
+		}			
+		writePrefs();
+	}
+	
+	
+	
+    private String c(String key, int i){
+    	return key+"_"+Integer.toString(i);
+    }
+	
+	private boolean readPrefs(){
+		length = pr.getInt(LENGTH);
+		if(length==0) return false;	
+		for(int i = 0; i < length; i++){
+			flag.add(		pr.getInt(		c(ITEM_FLAG,i)));
+			bytesize.add(	pr.getInt(		c(ITEM_BYTESIZE,i)));		
+			size.add(		pr.getString(	c(ITEM_SIZE,i)));	
+			name.add(		pr.getString(	c(ITEM_NAME,i)));
+			url.add(		pr.getString(	c(ITEM_URL,i)));	
+			version.add(	pr.getString(	c(ITEM_VERSION,i)));
+			title.add(		pr.getString(	c(ITEM_TITLE,i)));	
+			descurl.add(	pr.getString(	c(ITEM_DESCURL,i)));
+			lang.add(		pr.getString(	c(ITEM_LANG,i)));	
+		}
+		return true;
+	}
+	
+	private void writePrefs(){
+		//int len = name.size();
+		//Log.d("Instead",  "Write game list");
+		pr.set(LENGTH, length);
+		if(length==0) return;
+		for(int i = 0; i < length; i++){
+		
+			pr.set(c(ITEM_FLAG,i), 		flag.get(i));
+			pr.set(c(ITEM_BYTESIZE,i), 	bytesize.get(i));
+			pr.set(c(ITEM_SIZE,i),		size.get(i));
+			pr.set(c(ITEM_NAME,i), 		name.get(i));
+			pr.set(c(ITEM_URL,i), 		url.get(i));
+			pr.set(c(ITEM_VERSION,i), 	version.get(i));
+			pr.set(c(ITEM_TITLE,i), 	title.get(i));
+			pr.set(c(ITEM_DESCURL,i), 	descurl.get(i));
+			pr.set(c(ITEM_LANG,i), 		lang.get(i));
+		}
+		pr.commit();
+	}
+	
+	
 
 	public boolean isOK() {
 		return ok;
 	}
 
-	private void setFlags(){
-		
-		//int i = 0;
-		
-		BufferedReader input = null;
-		try {
-			input = new BufferedReader(new InputStreamReader(
-					new FileInputStream(new File(fflags)), "UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-		} catch (FileNotFoundException e) {
-		}
-
-		try {
-			String line = null;
-			while ((line = input.readLine()) != null) {
-			  
-				flag.add(Integer.parseInt(line.trim()));
-
-				
-			}
-			} catch (NullPointerException e) {
-			} catch (IOException e) {
-			}
-
-
-	try {
-		input.close();
-	} catch (IOException e) {
-	}
-		
-	}
-	
-	public void flagsRescan(){
-		getFlags();
-	}
-	
-	private void getFlags() {
-		//Log.d("LEXX", "RESCAN");
-		
-		(new File(fflags)).delete();
+	private void flagsScan() {
 		
 		String path;
-		int ff;
-		
-		String buf = "";
-		
+
 		for (int i = 0; i < getLength(); i++) {
 			path = Globals.getOutFilePath(Globals.GameDir + name.get(i)
 					+ "/main.lua");
@@ -173,33 +179,17 @@ public class GameList {
 			if (checkFile(path)) {
 
 				if (getVerFromFile(path, i)) {
-					ff = INSTALLED;
+					flag.add(i, INSTALLED);
 				} else {
-					ff = UPDATE;
+					flag.add(i, UPDATE);
 				}
 
 			} else {
-				ff = NEW;
+				flag.add(i,NEW);
 			}
 			
-			buf = buf + Integer.toString(ff)+"\n";
-		}
 
-		OutputStream out = null;
-		byte buff[] = buf.getBytes();
-		try {
-			out = new FileOutputStream(fflags);
-			out.write(buff);
-			out.close();
-		} catch (FileNotFoundException e) {
-		} catch (SecurityException e) {
-		} catch (java.io.IOException e) {
-			Log.e("Instead ERROR", "Error writing file " + fflags);
-			return;
 		}
-		;
-		
-		
 	}
 
 	private boolean getVerFromFile(String path, int n) {
@@ -309,7 +299,7 @@ public class GameList {
 		// //Log.d(Globals.TAG,"Nodes: "+length);
 		for (int i = 0; i < length; i++) {
 	
-			name.add(na);
+			//name.add(na);
 			url.add(na);	
 			version.add(na);
 			title.add(na);
