@@ -89,7 +89,7 @@
     <string name="ver">Version</string>
     <string name="tutorial">Tutorial</string>
     <string name="gmwhat">Install and run the game</string>
-    <string name="optwhat">Sound and font</string>
+    <string name="optwhat">Screen, sound and font</string>
     <string name="marketon">Rate, write a comment</string>
     <string name="market">Instead on the Market</string>
     <string name="nourq">URQ module is not installed!</string>
@@ -100,4 +100,12 @@
     <string name="start">Start</string>
     <string name="theme">Theme: </string>
     <string name="portrait">Portrait screen orientation</string>
+    <string name="dirlist">Folder with games</string>
+    <string name="gamein">Games in</string>
+    <string name="cpidf">Copy the game file to a folder Instead?\n\nThis will provide an opportunity to run the game directly with Instead.</string>
+    <string name="copy">Copying...</string>
+    <string name="rmidf">Remove game in IDF</string>
+    <string name="runidf">Run game in IDf</string>
+    <string name="noidf">IDF games not found!</string>
+    <string name="folderop">Games available for launch</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.silentlexx.instead;
 
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,21 +10,26 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
-//import android.util.Log;
+import android.util.Log;
 import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ContextMenu.ContextMenuInfo;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.Spinner;
 
 public class Options extends Activity {
 	final static int VSMALL = 0;
@@ -33,20 +39,23 @@ public class Options extends Activity {
 	final static int VLAGE = 20;
 	private int fsize;
 	private boolean is_f = false;
-	private  LastGame lastGame;
+//	private  LastGame lastGame;
 	private Button sfont;
 	private Button reset;
 	private CheckBox music;
 	private CheckBox click;
 	private CheckBox ourtheme;
 	private CheckBox scroff;
-	private CheckBox portrait;
+	//private CheckBox portrait;
+	private Spinner spinner;
 	
+	private int theme;
+	private String arr[];
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		lastGame = new LastGame(this);
+	//	lastGame = new LastGame(this);
 		
 		setContentView(R.layout.options);
 
@@ -77,11 +86,24 @@ public class Options extends Activity {
 		click = (CheckBox) findViewById(R.id.click);
 		ourtheme = (CheckBox) findViewById(R.id.ourtheme);
 		scroff = (CheckBox) findViewById(R.id.scroff);
-		portrait = (CheckBox) findViewById(R.id.portrait);
-		
-		if(lastGame.getOreintation()==Globals.PORTRAIT){
-			portrait.setChecked(true);
-		}
+//		portrait = (CheckBox) findViewById(R.id.portrait);
+		spinner =(Spinner) findViewById(R.id.spinner);
+		readDir();
+  		ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, arr);
+		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+		spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+		    @Override
+		    public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+		    	theme = position;
+		     }
+
+			@Override
+			public void onNothingSelected(AdapterView<?> arg0) {
+
+			}			
+			
+		});
 		
 	}
 
@@ -196,8 +218,76 @@ public class Options extends Activity {
 		finish();
 	}
 	
+	private void  readDir(){
+		List<String> ls = new ArrayList<String>();
+		File f = new File(Globals.getOutFilePath("themes"));
+		if(f.isDirectory()){
+		if(f.list().length>0){
+			String files[] = f.list();
+			for (String temp : files) {
+				File file = new File(f, temp);
+				if(file.isDirectory()){
+					//Log.d("DIR",temp);
+					ls.add(temp);
+				}
+			}
+		}
+		}
 
+        arr = new String[ls.size()]; 
+        for(int i = 0; i < ls.size(); i++){
+      	  arr[i] = ls.get(i);
+        }
+        ls.clear();
+
+		
+	}
+
+	public static boolean isPortrait(){
+		boolean b = false;
+		String path = Globals.getOutFilePath(Globals.Options);
+		BufferedReader input = null;
+		try {
+			input = new BufferedReader(new InputStreamReader(
+					new FileInputStream(new File(path)), "UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+		} catch (FileNotFoundException e) {
+		}
+
+		try {
+			String line = null;
+			while ((line = input.readLine()) != null) {
+
+				try {
+					if (line.toLowerCase().matches("theme.*"+Globals.PORTRET_KEY.toLowerCase()+".*")) {
+						b = true;
+					} 
+				} catch (NullPointerException e) {
+				}
+			}
+
+		} catch (IOException e) {
+		} catch (NullPointerException e) {
+		}
+
+		try {
+			input.close();
+		} catch (IOException e) {
+		}
+		return b;
+	}
+	
+	
+	
 	private void readRC() {
+	/*	
+		if(lastGame.getOreintation()==Globals.PORTRAIT){
+			portrait.setChecked(true);
+		} else {
+			portrait.setChecked(false);
+		}
+	*/
+		
 		File sf = new File(getFilesDir() + Globals.ScreenOffFlag); 
 		
 		if(sf.exists()){
@@ -205,7 +295,6 @@ public class Options extends Activity {
 		} else {
 			scroff.setChecked(true);
 		}
-		
 		
 		String path = Globals.getOutFilePath(Globals.Options);
 		BufferedReader input = null;
@@ -222,16 +311,25 @@ public class Options extends Activity {
 
 				try {
 					if (line.toLowerCase().matches(
-							"(.*)music(\\ *)=(\\ *)1(.*)")) {
+							"music\\ *=\\ *1.*")) {
 						music.setChecked(true);
-					}
+					} else
 					if (line.toLowerCase().matches(
-							"(.*)click(\\ *)=(\\ *)1(.*)")) {
+							"click\\ *=\\ *1.*")) {
 						click.setChecked(true);
-					}
+					} else
 					if (line.toLowerCase().matches(
-							"(.*)owntheme(\\ *)=(\\ *)1(.*)")) {
+							"owntheme\\ *=\\ *1.*")) {
 						ourtheme.setChecked(true);
+					} else
+					if (line.toLowerCase().matches(
+							"theme.*")) {
+						String tmp = line.replaceAll("\\s", "");
+						String[] tokens = tmp.split("=");
+						if(tokens.length==2){
+							findTheme(tokens[1]);
+						}
+
 					}
 				} catch (NullPointerException e) {
 				}
@@ -245,8 +343,24 @@ public class Options extends Activity {
 			input.close();
 		} catch (IOException e) {
 		}
-
 	}
+	
+	
+	private void findTheme(String s){
+		for (int i=0; i < arr.length; i++){
+			if(s.toLowerCase().equals(arr[i].toLowerCase())){
+				theme = i;
+				spinner.setSelection(theme);
+				return;
+			}
+			
+		}
+		
+		
+	}
+	
+	
+	
 
 	private String getOpt(boolean b) {
 		if (b) {
@@ -257,13 +371,14 @@ public class Options extends Activity {
 	}
 
 	private void rewriteRC() {
-		
+	/*
 	    if(portrait.isChecked()){
 	    	lastGame.setOreintetion(Globals.PORTRAIT);
 	    } else {
 	    	lastGame.setOreintetion(Globals.LANDSCAPE);	
 	    }
-		
+	*/
+	
 		File sf = new File(getFilesDir() + Globals.ScreenOffFlag);
 		
 		if(scroff.isChecked()){
@@ -272,8 +387,7 @@ public class Options extends Activity {
 			try {
    	    		sf.createNewFile();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Log.e("Error", e.toString());
 			}
     		
 		}
@@ -285,11 +399,9 @@ public class Options extends Activity {
 			input = new BufferedReader(new InputStreamReader(
 					new FileInputStream(new File(path)), "UTF-8"));
 		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Log.e("Error", e.toString());
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Log.e("Error", e.toString());
 		}
 
 		try {
@@ -297,18 +409,21 @@ public class Options extends Activity {
 			while ((line = input.readLine()) != null) {
 				try {
 					if (line.toLowerCase()
-							.matches("(.*)music(\\ *)=(\\ *)(.*)")) {
+							.matches("music\\ *=\\ *.*")) {
 						rc = rc + "music = " + getOpt(music.isChecked()) + "\n";
 					} else if (line.toLowerCase().matches(
-							"(.*)click(\\ *)=(\\ *)(.*)")) {
+							"click\\ *=\\ *.*")) {
 						rc = rc + "click = " + getOpt(click.isChecked()) + "\n";
 					} else if (line.toLowerCase().matches(
-							"(.*)owntheme(\\ *)=(\\ *)(.*)")) {
+							"owntheme\\ *=\\ *.*")) {
 						rc = rc + "owntheme = " + getOpt(ourtheme.isChecked())	+ "\n";
 					} else if (is_f && line.toLowerCase().matches(
-					"(.*)fscale(\\ *)=(\\ *)(.*)")) {
+					"fscale\\ *=\\ *.*")) {
 			        	rc = rc + "fscale = " + Integer.toString(fsize) + "\n";
-					} else {
+					} else if (line.toLowerCase().matches(
+					"theme\\ *=\\ *.*")) {
+			        	rc = rc + "theme = " + arr[theme] + "\n";
+					}else {
 						rc = rc + line + "\n";
 					}
 

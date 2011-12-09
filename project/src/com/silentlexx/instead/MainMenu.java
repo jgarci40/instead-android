@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
@@ -14,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -25,19 +28,27 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Html;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.Display;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.SimpleAdapter.ViewBinder;
+import android.widget.Toast;
 
 public class MainMenu extends ListActivity implements ViewBinder {
+	private final int LS_IDF = 0;
+	private final int DELETE_IDF = 1;
+	private final int RUN_IDF = 3;
+	private int idf_act = LS_IDF;
 	private ProgressDialog dialog;
 	protected boolean dwn = false;
 	protected boolean onpause = false;
@@ -45,7 +56,11 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private static final String LIST_TEXT = "list_text";
 	private static final String BR = "<br>";
 	private  LastGame lastGame;
-
+	private final Handler h = new Handler();
+	private String out = null;
+	private TextView email;
+	private List<String> dnames = new ArrayList<String>();
+	private List<String> dtitles = new ArrayList<String>();	
 	private class ListItem {
 		public String text;
 		public int icon;
@@ -54,6 +69,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		lastGame = new LastGame(this);
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
@@ -61,15 +77,24 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		dialog.setIndeterminate(true);
 		dialog.setCancelable(false);
         setContentView(R.layout.mnhead);
+        email = (TextView) findViewById(R.id.email);
+        email.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				sendEmail();
+			}
+		});
 		listView = getListView();
 		listView.setBackgroundColor(Color.BLACK);
 		listView.setBackgroundDrawable(this.getResources().getDrawable(
 				R.drawable.wallpaper));
 		registerForContextMenu(listView);
 		showMenu();
-		if (!dwn)
+		if (!dwn) {
 			checkRC();
-
+		} 
+		startAppIdf();
 	}
 
 	private void showMenu(){
@@ -86,20 +111,28 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				BR+
 				getHtmlTagForSmall(getString(R.string.gmwhat)),
 				R.drawable.gamelist));
+		
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.dirlist))+
+				BR+
+				getHtmlTagForSmall(getString(R.string.folderop)),
+				R.drawable.folder));
+		
 		listData.add(addListItem(
 				getHtmlTagForName(getString(R.string.options))+
 				BR+
 				getHtmlTagForSmall(getString(R.string.optwhat)),
 				R.drawable.options));
+/*
 		listData.add(addListItem(
 				getHtmlTagForName(getString(R.string.market))+
 				BR+
 				getHtmlTagForSmall(getString(R.string.marketon)),
 				R.drawable.market));
-		listData.add(addListItem(getHtmlTagForName(getString(R.string.about_btn))
+*/
+	/*	listData.add(addListItem(getHtmlTagForName(getString(R.string.about_btn))
 				+ BR
 				+ getHtmlTagForSmall(getString(R.string.ver) + " "
-						+ Globals.AppVer(this)), R.drawable.info));
+						+ Globals.AppVer(this)), R.drawable.info)); */
 //		listData.add(addListItem(getHtmlTagForName(getString(R.string.mailme)),
 //				R.drawable.email_go));
 //		listData.add(addListItem(getHtmlTagForName(getString(R.string.exit)),
@@ -128,19 +161,21 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				startAppAlt();
 				break;
 			case 1:
-				startApp();
+				startApp(lastGame.getName());
 				break;
 			case 2:
 				startGM();
 				break;
+				
 			case 3:
+			    idf_act = LS_IDF;
+				getGamesLS();
+				break;		
+			case 4:
 				startOpt();
 				break;
 			case 5:
 				showAboutInstead();
-				break;
-			case 4:
-				openMarket();
 				break;
 			}
 			
@@ -199,6 +234,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		}
 		dwn = false;
 		checkRC();
+		startAppIdf();
 	}
 
 	private void startAppAlt() {
@@ -212,12 +248,35 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			checkRC();
 		}
 	}
+
+	private void startAppIdf() {
+		 if(Globals.idf!=null){
+				Copy();
+		 }
+	}
 	
-	private void startApp() {
+	private void startAppIdfC() {
+	 if(Globals.idf!=null){
 		if (checkInstall()) {
 			Intent myIntent = new Intent(this, SDLActivity.class);
 			Bundle b = new Bundle();
-			b.putString("game", lastGame.getName());
+			b.putString("idf", Globals.idf);
+			Globals.idf = null;
+			myIntent.putExtras(b);
+			startActivity(myIntent);
+
+		} else {
+			checkRC();
+		}
+	 }
+	}
+	
+	
+	private void startApp(String g) {
+		if (checkInstall()) {
+			Intent myIntent = new Intent(this, SDLActivity.class);
+			Bundle b = new Bundle();
+			b.putString("game", g);
 			myIntent.putExtras(b);
 			startActivity(myIntent);
 		} else {
@@ -319,6 +378,17 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	case R.id.about:
 		showAboutInstead();
 		break;
+	case R.id.market:
+			openMarket();
+		break;	
+	case R.id.rmidf:
+		  	    idf_act = DELETE_IDF;
+				getGamesLS();
+		break;	
+	case R.id.runidf:
+  	    idf_act = RUN_IDF;
+		getGamesLS();
+break;	
 	}		
 		return true;
 	}
@@ -331,8 +401,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 
 	private void loadData() {
 			dwn = true;
-			ShowDialog();
-			dialog.setMessage(getString(R.string.init));
+			ShowDialog(getString(R.string.init));
 			new DataDownloader(this, dialog);
 	}
 
@@ -382,7 +451,8 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		return false;
 	}
 
-	public void ShowDialog() {
+	public void ShowDialog(String m) {
+		dialog.setMessage(m);
 		dialog.setCancelable(false);
 		dialog.show();
 	}
@@ -395,7 +465,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			}
 		} else {
 			(new File(Globals.getOutFilePath(Globals.Options))).delete();
-			lastGame.removeLast();
+			   lastGame.clearAll();
 			showMenu();
 			loadData();
 		}
@@ -504,4 +574,219 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				.show();
 	}
 
+
+	
+	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v,
+			ContextMenuInfo menuInfo) {
+		super.onCreateContextMenu(menu, v, menuInfo);
+				
+			boolean found = false;
+			dnames.clear();
+			dtitles.clear();
+			if(idf_act == DELETE_IDF){
+				menu.setHeaderTitle(getString(R.string.rmidf));
+				} else {
+				menu.setHeaderTitle(getString(R.string.run));
+				}
+				
+				File f = new File(Globals.getOutFilePath(Globals.GameDir));
+				if(f.isDirectory()){
+				if(f.list().length>0){
+					String files[] = f.list();
+					for (String temp : files) {
+						File file = new File(f, temp);
+
+						if(idf_act == LS_IDF) {
+							if(file.isDirectory()){
+							    if(isWorking(temp)){	
+							    	found = true;
+							    	String title = getTitle(temp);
+							    	if (title==null) title = temp;
+							    	dnames.add(temp);
+							    	dtitles.add(title);
+							    	menu.add(0, v.getId(), 0, title);
+							    }
+							} if(temp.endsWith(".idf")){
+								found = true;
+								dnames.add(temp);
+								dtitles.add(temp);
+								menu.add(0, v.getId(), 0, temp);			
+							} 
+							
+						} else if(idf_act == DELETE_IDF || idf_act == RUN_IDF) {
+							if(file.isFile() && temp.endsWith(".idf")){
+								found = true;
+								dnames.add(temp);
+								dtitles.add(temp);
+								menu.add(0, v.getId(), 0, temp);			
+							}						   
+						} 
+					}
+				}
+				}
+				
+				if(!found) Toast.makeText(this, getString(R.string.noidf), Toast.LENGTH_SHORT).show();
+	}
+
+	private String getIndexMenu(String s){
+		String n = null;
+		for(int  i = 0; i < dtitles.size(); i++){
+			if(s.toLowerCase().equals(dtitles.get(i).toLowerCase())){
+				return dnames.get(i);			
+			}
+		}
+		
+		return n;
+	}
+	
+	private boolean isWorking(String f){
+		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;		
+		return (new File(path)).isFile();
+	}
+	
+	private String getTitle(String f){
+		String t = f;
+		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;
+		String line = null;
+		BufferedReader input = null;
+		try {
+				input = new BufferedReader(new InputStreamReader(
+				new FileInputStream(new File(path)), "UTF-8"));
+				line = input.readLine();
+				input.close();
+
+		} catch (Exception e) {
+			return t;
+		} 
+		
+		return matchUrl(line, ".*\\$Name:(.*)\\$");
+	}
+	
+	
+	@Override
+	public boolean onContextItemSelected(MenuItem item) {
+		String s = getIndexMenu(item.getTitle().toString()); 
+		if(s==null) return false;
+		if(s.endsWith(".idf")){
+			if(idf_act == LS_IDF || idf_act == RUN_IDF ){
+			Globals.idf = Globals.getOutFilePath(Globals.GameDir)+s;
+			startAppIdf();	
+			} else 
+				if(idf_act == DELETE_IDF) {
+			       Globals.idf = null;
+			       (new File (Globals.getOutFilePath(Globals.GameDir)+s)).delete();	
+			       Toast.makeText(this, getString(R.string.delgame), Toast.LENGTH_SHORT).show();				
+				}	
+				
+		} else {
+			startApp(s);
+		}
+		return true;
+	}
+	
+	private void getGamesLS(){
+		openContextMenu(listView);
+	}
+	
+	public static String matchUrl(String url, String patt){
+		Matcher m;  
+	try{
+		m = Pattern.compile(patt).matcher(url);
+	  } catch(NullPointerException e){
+		  return null;
+	  }
+		
+		if(m.find()) return	m.toMatchResult().group(1);
+		return null;
+    }
+	
+	
+	
+	private void Copy(){
+	  out  = Globals.getOutFilePath(Globals.GameDir + matchUrl(Globals.idf, ".*\\/(.*\\.idf)"));
+	  
+	  if((new File(out)).isFile()){
+		  startAppIdfC();
+		  return;
+	  }
+		
+	  
+	DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				switch (which) {
+				case DialogInterface.BUTTON_NEGATIVE:
+					  startAppIdfC();
+					break;
+				case DialogInterface.BUTTON_POSITIVE:
+
+					doCopy();
+					break;
+				}
+			}				
+		};
+		
+		DialogInterface.OnCancelListener dialogCancelListener = new DialogInterface.OnCancelListener() {
+			@Override
+			public void onCancel(DialogInterface dialog) {
+				  startAppIdf();
+			}
+		};
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setIcon(R.drawable.warning);
+		//builder.setTitle(getString(R.string.app_name));
+		builder.setMessage(getString(R.string.cpidf))
+				.setPositiveButton(R.string.yes, dialogClickListener)
+				.setNegativeButton(R.string.no, dialogClickListener)
+				.setOnCancelListener(dialogCancelListener)
+				.show();
+		
+		
+			}
+
+	private void doCopy() {
+		ShowDialog(getString(R.string.copy));				
+				final Runnable d = new Runnable() {
+					@Override
+					public void run(){
+						try {
+							copyFile(Globals.idf, out);
+						} catch (Exception e) {
+							Log.e("Idf copy error", e.toString());
+						}
+						Globals.idf = out;
+						startAppIdfC();
+					}};
+					//h.removeCallbacks(d);
+					
+					Thread t = new Thread(){
+					@Override
+					public void run(){
+					h.post(d);					
+					}
+					};
+					t.start();
+	}
+	
+	private void copyFile(String fa, String fb) throws Exception{
+
+		File f1 = new File(fa);
+		File f2 = new File(fb);
+		
+		  InputStream in = new FileInputStream(f1);
+		  OutputStream out = new FileOutputStream(f2);
+
+		  byte[] buf = new byte[1024];
+		  int len;
+		  while ((len = in.read(buf)) > 0){
+		  out.write(buf, 0, len);
+		  }
+		  in.close();
+		  out.close();
+		if (dialog.isShowing()) {
+			dialog.dismiss();
+		}
+	}
+	
 }

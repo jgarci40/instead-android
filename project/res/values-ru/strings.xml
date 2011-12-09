@@ -89,7 +89,7 @@
     <string name="ver">Версия</string>
     <string name="tutorial">Учебник</string>
     <string name="gmwhat">Установка и запуск игр</string>
-    <string name="optwhat">Звук и шрифт</string>
+    <string name="optwhat">Экран, звук и шрифт</string>
     <string name="marketon">Оценить, написать коментарий</string>
     <string name="market">Instead на Маркете</string>
     <string name="nourq">URQ модуль не установлен!</string>
@@ -100,4 +100,12 @@
     <string name="start">Запустить</string>
     <string name="theme">Тема: </string>
     <string name="portrait">Портретная ориентация экрана</string>
+    <string name="dirlist">Папка с играми</string>
+    <string name="gamein">Игры в</string>
+    <string name="cpidf">Копировать файл игры в папку Instead?\n\nЭто даст возможность запускать игру непосредственно с Instead</string>
+    <string name="copy">Копирование...</string>
+    <string name="rmidf">Удалить игру в IDF</string>
+    <string name="runidf">Запустить игру в IDF</string>
+    <string name="noidf">Игр в IDF не найдено!</string>
+    <string name="folderop">Игры доступные к запуску</string>
 </resources>

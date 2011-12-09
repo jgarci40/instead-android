@@ -62,12 +62,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private int toppos;
 	private ListView listView;
 	private LastGame lastGame;
-	private Handler h;
+	private final Handler h = new Handler();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		h = new Handler();
 		index = new ArrayList<Integer>();
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
@@ -710,7 +709,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
     		Globals.delete(new File(Globals.getOutFilePath(Globals.GameDir
     				+ gl.getInf(GameList.NAME, index.get(item_index)))));    		    		
     		if(gl.getInf(GameList.NAME, index.get(item_index)).equals(lastGame.getName())){
-    			lastGame.removeLast();
+    			lastGame.clearGame();
     		}
     		fscan = true;
     		listUpdate();
@@ -735,8 +734,15 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		ShowDialog();
 		dialog.setMessage(getString(R.string.deleting));
 		dialog.setCancelable(false);
-		h.removeCallbacks(deleteDir);
-    	h.postDelayed(deleteDir, 100);
+		//h.removeCallbacks(deleteDir);
+    	//h.postDelayed(deleteDir, 100);
+    	Thread t = new Thread(){
+    		@Override 
+    		public void run(){
+    			h.post(deleteDir);
+    		}
+    	};
+    	t.start();
 	}
 
 	private void gameDownload() {
