@@ -39,7 +39,6 @@ public class Options extends Activity {
 	final static int VLAGE = 20;
 	private int fsize;
 	private boolean is_f = false;
-//	private  LastGame lastGame;
 	private Button sfont;
 	private Button reset;
 	private CheckBox music;
@@ -48,14 +47,14 @@ public class Options extends Activity {
 	private CheckBox scroff;
 	//private CheckBox portrait;
 	private Spinner spinner;
-	
+	private LastGame lastGame;
 	private int theme;
 	private String arr[];
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-	//	lastGame = new LastGame(this);
+		lastGame = new LastGame(this);
 		
 		setContentView(R.layout.options);
 
@@ -288,13 +287,10 @@ public class Options extends Activity {
 		}
 	*/
 		
-		File sf = new File(getFilesDir() + Globals.ScreenOffFlag); 
+
 		
-		if(sf.exists()){
-			scroff.setChecked(false);
-		} else {
-			scroff.setChecked(true);
-		}
+		scroff.setChecked(lastGame.getScreenOff());
+
 		
 		String path = Globals.getOutFilePath(Globals.Options);
 		BufferedReader input = null;
@@ -379,18 +375,7 @@ public class Options extends Activity {
 	    }
 	*/
 	
-		File sf = new File(getFilesDir() + Globals.ScreenOffFlag);
-		
-		if(scroff.isChecked()){
-			sf.delete();			
-		} else {
-			try {
-   	    		sf.createNewFile();
-			} catch (IOException e) {
-				Log.e("Error", e.toString());
-			}
-    		
-		}
+		lastGame.setScreenOff(scroff.isChecked());
 		
 		String path = Globals.getOutFilePath(Globals.Options);
 		String rc = "";

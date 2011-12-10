@@ -108,4 +108,6 @@
     <string name="runidf">Запустить игру в IDF</string>
     <string name="noidf">Игр в IDF не найдено!</string>
     <string name="folderop">Игры доступные к запуску</string>
+    <string name="instzipwarn">Если вы не уверены что в зип файле находится игра для Instead - нажмите "НЕТ"!</string>
+    <string name="instzip">Установить игру с zip-архива?</string>
 </resources>

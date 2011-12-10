@@ -108,4 +108,6 @@
     <string name="runidf">Run game in IDf</string>
     <string name="noidf">IDF games not found!</string>
     <string name="folderop">Games available for launch</string>
+    <string name="instzipwarn">If you are not sure that the zip file contains the game Instead - click "NO"!</string>
+    <string name="instzip">Install game from zip?</string>
 </resources>

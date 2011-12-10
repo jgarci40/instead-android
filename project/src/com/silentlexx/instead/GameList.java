@@ -21,6 +21,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import android.util.Log;
+
 public class GameList {
 	private final String LIST_PREFS = Globals.ApplicationName+"-games";
 	private final String LENGTH = "lenght";
@@ -104,7 +106,7 @@ public class GameList {
 		xml = Parent.getFilesDir()+"/"+f;
 		
 		
-		if(!readPrefs() || fscan){
+		if(!readPrefs() || fscan || Globals.FlagSync){
 			createPrefs();
 		}
     
@@ -169,7 +171,7 @@ public class GameList {
 	}
 
 	private void flagsScan() {
-		
+		Log.d("Instead","Rescan games flags!");
 		String path;
 
 		for (int i = 0; i < getLength(); i++) {
@@ -190,6 +192,7 @@ public class GameList {
 			
 
 		}
+		Globals.FlagSync = false ;
 	}
 
 	private boolean getVerFromFile(String path, int n) {

@@ -12,7 +12,9 @@ public class LastGame {
 	private int list;
 	private String lang;	    
     private MyPrefs pr;
-	
+    private boolean scroff;
+    private boolean flagsync;
+    
 	LastGame(Context p){
 		pr = new MyPrefs(p, Globals.ApplicationName); 
 		title_def =  p.getString(R.string.tutorial);
@@ -21,7 +23,8 @@ public class LastGame {
  		lang = pr.get("lang", Globals.Lang.ALL);
  		name = pr.get("name", Globals.TutorialGame);
  		title = pr.get("title", title_def);
- 		
+ 		scroff = pr.get("scroff", true);
+ 		flagsync = pr.get("flagsync", false);
 	}
 	
 	public void clearGame(){
@@ -31,7 +34,8 @@ public class LastGame {
 	}
 
 	public void clearAll(){
-
+		scroff = true;
+		flagsync = false;
 		filtr = GameList.ALL;
  		list =  Globals.BASIC;		
  		lang = Globals.Lang.ALL;
@@ -95,15 +99,37 @@ public class LastGame {
 		list = l;
 		Commit();
 	}
+	
+	
+	public boolean getScreenOff(){
+		return scroff;
+	}
+	
+	public void setScreenOff(boolean b){
+		scroff = b;
+		Commit();
+	}
 
+	public boolean getFlagSync(){
+		return flagsync;
+	}
+	
+	public void setFlagSync(boolean b){
+		flagsync = b;
+		Commit();
+	}
 
+	
+	
 	private void Commit() {
+		pr.set("flagsync", flagsync);
  		pr.set("filtr", filtr);
  		pr.set("list", list);		
  		pr.set("lang", lang);
  		pr.set("name", name);
  		pr.set("title", title);		
-		pr.commit();
+ 		pr.set("scroff", scroff);		
+ 		pr.commit();
 	}
 	
 }
