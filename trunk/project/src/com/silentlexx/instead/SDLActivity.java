@@ -1,6 +1,5 @@
 package com.silentlexx.instead;
 
-import java.io.File;
 import javax.microedition.khronos.egl.*;
 import android.app.*;
 import android.content.*;
@@ -142,7 +141,7 @@ public class SDLActivity extends Activity {
 	@Override
 	protected void onPause() {
 		nativeSave();
-		if(isLocked())wakeLock.release();
+		if(lastGame.getScreenOff())wakeLock.release();
 		 Log.v("SDL", "onPause()");
 		//if(!first_run) mSurface.suspend();
 	    //mSurface = null;
@@ -152,7 +151,7 @@ public class SDLActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		if(isLocked())wakeLock.acquire();
+		if(lastGame.getScreenOff())wakeLock.acquire();
 		 Log.v("SDL", "onResume()");
 		// if(!first_run) mSurface.resume();
 	}
@@ -186,13 +185,7 @@ public class SDLActivity extends Activity {
 		h.postDelayed(keySend,WAIT);
 	}
 	
-	private boolean isLocked(){
-		if((new File(getFilesDir() + Globals.ScreenOffFlag)).exists()){
-			return false;
-		} else {
-		return true;
-		}
-	}
+
 	
 	
 	// Messages from the SDLMain thread

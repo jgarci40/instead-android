@@ -23,6 +23,7 @@ import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
@@ -71,6 +72,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		super.onCreate(savedInstanceState);
 
 		lastGame = new LastGame(this);
+		Globals.FlagSync = lastGame.getFlagSync();
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
 		dialog.setMessage(getString(R.string.init));
@@ -92,9 +94,45 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		registerForContextMenu(listView);
 		showMenu();
 		if (!dwn) {
+			copyXml(Globals.GameListFileName);
+			copyXml(Globals.GameListAltFileName);
 			checkRC();
 		} 
-		startAppIdf();
+			if(Globals.idf!=null) IdfCopy();
+			if(Globals.zip!=null) ZipInstall();
+	}
+
+	private void ZipInstall() {
+		DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				switch (which) {
+				case DialogInterface.BUTTON_POSITIVE:
+						loadZip();
+					break;
+
+				case DialogInterface.BUTTON_NEGATIVE:
+						return;
+					
+				}
+			}
+		};
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setIcon(R.drawable.warning);
+		builder.setTitle(getString(R.string.instzipwarn));
+		builder.setMessage(getString(R.string.instzipwarn))
+				.setPositiveButton(getString(R.string.yes), dialogClickListener)
+				.setNegativeButton(getString(R.string.no), dialogClickListener)
+				.show();
+	}
+
+	
+	
+	private void loadZip() {
+		dwn = true;
+		ShowDialog(getString(R.string.init));
+		new ZipGame(this, dialog);
 	}
 
 	private void showMenu(){
@@ -122,21 +160,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				BR+
 				getHtmlTagForSmall(getString(R.string.optwhat)),
 				R.drawable.options));
-/*
-		listData.add(addListItem(
-				getHtmlTagForName(getString(R.string.market))+
-				BR+
-				getHtmlTagForSmall(getString(R.string.marketon)),
-				R.drawable.market));
-*/
-	/*	listData.add(addListItem(getHtmlTagForName(getString(R.string.about_btn))
-				+ BR
-				+ getHtmlTagForSmall(getString(R.string.ver) + " "
-						+ Globals.AppVer(this)), R.drawable.info)); */
-//		listData.add(addListItem(getHtmlTagForName(getString(R.string.mailme)),
-//				R.drawable.email_go));
-//		listData.add(addListItem(getHtmlTagForName(getString(R.string.exit)),
-//				R.drawable.stop));
 
 		SimpleAdapter simpleAdapter = new SimpleAdapter(this, listData,
 				R.layout.list_item, new String[] { LIST_TEXT },
@@ -228,34 +251,38 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		startActivity(i);
 	}
 
-	void showRun() {
+	public void showRun() {
 		if (dialog.isShowing()) {
 			dialog.dismiss();
 		}
 		dwn = false;
 		checkRC();
-		startAppIdf();
+		if(Globals.idf!=null) IdfCopy();
+		if(Globals.zip!=null) ZipInstall();
 	}
 
+	public void showRunB() {
+		if (dialog.isShowing()) {
+			dialog.dismiss();
+		}
+		dwn = false;
+		Globals.zip = null;
+		Globals.FlagSync = true;
+		lastGame.setFlagSync(true);
+	}
+	
+	
 	private void startAppAlt() {
 		if (checkInstall()) {
 			Intent myIntent = new Intent(this, SDLActivity.class);
-			Bundle b = new Bundle();
-			//b.putString("game", lastGame.getName());
-			myIntent.putExtras(b);
 			startActivity(myIntent);
 		} else {
 			checkRC();
 		}
 	}
 
+
 	private void startAppIdf() {
-		 if(Globals.idf!=null){
-				Copy();
-		 }
-	}
-	
-	private void startAppIdfC() {
 	 if(Globals.idf!=null){
 		if (checkInstall()) {
 			Intent myIntent = new Intent(this, SDLActivity.class);
@@ -552,8 +579,35 @@ break;
 			};
 		}
 
+		
 	}
 
+	private void copyXml(String p){
+		String path = this.getFilesDir()+"/"+p;
+		File f = new File(path);
+		if(!f.exists()){
+			try{
+				AssetManager am = this.getAssets();
+				InputStream in = am.open(p, AssetManager.ACCESS_BUFFER);
+				OutputStream out = new FileOutputStream(path);
+				  byte[] buf = new byte[1024];
+				  int len;
+				  while ((len = in.read(buf)) > 0){
+					  out.write(buf, 0, len);
+				  }
+				  in.close();
+				  out.close();
+				
+			} catch (Exception e) {
+				Log.e("Error", e.toString());
+			}
+			
+			
+		}
+		
+	}
+	
+	
 	private void showAboutInstead() {
 		DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
 			@Override
@@ -703,11 +757,11 @@ break;
 	
 	
 	
-	private void Copy(){
+	private void IdfCopy(){
 	  out  = Globals.getOutFilePath(Globals.GameDir + matchUrl(Globals.idf, ".*\\/(.*\\.idf)"));
 	  
 	  if((new File(out)).isFile()){
-		  startAppIdfC();
+		   startAppIdf();
 		  return;
 	  }
 		
@@ -717,7 +771,7 @@ break;
 			public void onClick(DialogInterface dialog, int which) {
 				switch (which) {
 				case DialogInterface.BUTTON_NEGATIVE:
-					  startAppIdfC();
+					  startAppIdf();
 					break;
 				case DialogInterface.BUTTON_POSITIVE:
 
@@ -756,7 +810,7 @@ break;
 							Log.e("Idf copy error", e.toString());
 						}
 						Globals.idf = out;
-						startAppIdfC();
+						startAppIdf();
 					}};
 					//h.removeCallbacks(d);
 					

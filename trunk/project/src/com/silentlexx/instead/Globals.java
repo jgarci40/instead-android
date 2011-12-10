@@ -33,10 +33,7 @@ class Globals {
 	public static final String SaveDir = "appdata/saves/";
 	public static final String Options = "appdata/insteadrc";
 	public static final String MainLua = "/main.lua";
-	public static final String GameFlags = ".gameflags";
 	public static final String DataFlag = ".version";
-	public static final String LastGameOpt = "lastgame.dat";
-	public static final String ScreenOffFlag = ".screenoff";
 	public static final String TutorialGame = "tutorial3";
 	public static final String DirURQ = "urq";
 	public static final String StringURQ = "\\[URQ\\]";
@@ -47,9 +44,9 @@ class Globals {
 	public static final int PORTRAIT = 1;
 	public static final int LANDSCAPE = 2;
 
-	
+    public static boolean FlagSync = false;	
 	public static String idf = null;
-
+	public static String zip = null;
 	
 	class Lang {
 		public static final String RU = "ru";
@@ -71,6 +68,10 @@ class Globals {
 	
 	public static String getOutFilePath(final String filename) {
 		return getStorage() + Globals.ApplicationName + "/" + filename;
+	};
+
+	public static String getOutGamePath(final String filename) {
+		return getStorage() + Globals.ApplicationName + "/" + GameDir + filename;
 	};
 	
 	public static void delete(File file) {

@@ -502,6 +502,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	public void listUpdate() {
 	
 		gl = new GameList(this, getGameListName(listNo), fscan);
+		lastGame.setFlagSync(Globals.FlagSync);
 		fscan = false;
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
