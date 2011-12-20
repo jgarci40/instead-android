@@ -102,7 +102,7 @@
     <string name="portrait">Portrait screen orientation</string>
     <string name="dirlist">Folder with games</string>
     <string name="gamein">Games in</string>
-    <string name="cpidf">Copy the game file to a folder Instead?\n\nThis will provide an opportunity to run the game directly with Instead.</string>
+    <string name="cpidf">Copy the game file to a folder Instead?</string>
     <string name="copy">Copying...</string>
     <string name="rmidf">Remove game in IDF</string>
     <string name="runidf">Run game in IDf</string>
@@ -110,4 +110,9 @@
     <string name="folderop">Games available for launch</string>
     <string name="instzipwarn">If you are not sure that the zip file contains the game Instead - click "NO"!</string>
     <string name="instzip">Install game from zip?</string>
+    <string name="cpidfwarn">This will provide an opportunity to run the game directly with Instead.</string>
+    <string name="launch">Launch</string>
+    <string name="sand">Copy</string>
+    <string name="add_widget">Instead Game</string>
+    <string name="chgame">Choose the game</string>
 </resources>

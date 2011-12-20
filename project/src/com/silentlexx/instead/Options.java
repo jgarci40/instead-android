@@ -212,6 +212,9 @@ public class Options extends Activity {
 	}
 	
 	private void deleteCfg(){
+		(new File(this.getFilesDir()+"/"+Globals.GameListFileName)).delete();
+		(new File(this.getFilesDir()+"/"+Globals.GameListAltFileName)).delete();
+		lastGame.clearAll();
 		(new File(Globals.getOutFilePath(Globals.DataFlag))).delete();
 		(new File(Globals.getOutFilePath(Globals.Options))).delete();
 		finish();

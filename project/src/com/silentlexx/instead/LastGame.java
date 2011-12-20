@@ -24,7 +24,7 @@ public class LastGame {
  		name = pr.get("name", Globals.TutorialGame);
  		title = pr.get("title", title_def);
  		scroff = pr.get("scroff", true);
- 		flagsync = pr.get("flagsync", false);
+ 		flagsync = pr.get("flagsync", true);
 	}
 	
 	public void clearGame(){
@@ -35,7 +35,7 @@ public class LastGame {
 
 	public void clearAll(){
 		scroff = true;
-		flagsync = false;
+		flagsync = true;
 		filtr = GameList.ALL;
  		list =  Globals.BASIC;		
  		lang = Globals.Lang.ALL;

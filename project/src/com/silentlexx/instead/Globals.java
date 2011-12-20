@@ -44,9 +44,13 @@ class Globals {
 	public static final int PORTRAIT = 1;
 	public static final int LANDSCAPE = 2;
 
+	//VARS
     public static boolean FlagSync = false;	
 	public static String idf = null;
 	public static String zip = null;
+	public static String qm = null;
+//	public static String game = null;
+//	public static String title = null;
 	
 	class Lang {
 		public static final String RU = "ru";
