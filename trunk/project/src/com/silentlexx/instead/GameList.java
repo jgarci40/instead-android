@@ -85,7 +85,7 @@ public class GameList {
 	private GameMananger Parent;
 
 	
-	GameList(GameMananger _parent, String f, boolean fscan) {
+	GameList(GameMananger _parent, String f) {
 		Parent = _parent;
 		na=Parent.getString(R.string.na);
 		flag = new ArrayList<Integer>();
@@ -106,7 +106,7 @@ public class GameList {
 		xml = Parent.getFilesDir()+"/"+f;
 		
 		
-		if(!readPrefs() || fscan || Globals.FlagSync){
+		if(!readPrefs() || Globals.FlagSync){
 			createPrefs();
 		}
     

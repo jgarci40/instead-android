@@ -75,14 +75,22 @@ public class SDLActivity extends Activity {
 		//if(first_run){
 		first_run=false;
 		Log.v("SDL", "onCreate()");		
-		Bundle b = getIntent().getExtras();
+		Intent intent = getIntent(); 
+		if (intent.getAction()!=null){
+			game = intent.getAction();
+		} else {		
+		Bundle b = intent.getExtras();
 		if(b!=null){
 			game = b.getString("game");
 			idf = b.getString("idf");
 		}
+		}
 		
+		//Log.d("Game", intent.getStringExtra("game"));
 		//if(idf!=null) Log.d("idf", idf);
-		//if(game!=null) Log.d("game", game);
+		if(game!=null){Log.v("SDL", "Start game: "+game); }else{Log.v("SDL", "Start default game");};
+		//finish();
+		
 		
 		// So we can call stuff from static callbacks
 		mSingleton = this;

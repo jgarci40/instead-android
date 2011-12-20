@@ -102,12 +102,17 @@
     <string name="portrait">Портретная ориентация экрана</string>
     <string name="dirlist">Папка с играми</string>
     <string name="gamein">Игры в</string>
-    <string name="cpidf">Копировать файл игры в папку Instead?\n\nЭто даст возможность запускать игру непосредственно с Instead</string>
+    <string name="cpidf">Копировать файл игры в папку Instead?</string>
     <string name="copy">Копирование...</string>
     <string name="rmidf">Удалить игру в IDF</string>
     <string name="runidf">Запустить игру в IDF</string>
     <string name="noidf">Игр в IDF не найдено!</string>
     <string name="folderop">Игры доступные к запуску</string>
-    <string name="instzipwarn">Если вы не уверены что в зип файле находится игра для Instead - нажмите "НЕТ"!</string>
+    <string name="instzipwarn">Если вы не уверены что в zip-архиве находится игра для Instead - нажмите "НЕТ"!</string>
     <string name="instzip">Установить игру с zip-архива?</string>
+    <string name="cpidfwarn">Это даст возможность запускать игру непосредственно с Instead.</string>
+    <string name="launch">Запустить</string>
+    <string name="sand">Копировать</string>
+    <string name="add_widget">Игра Instead</string>
+    <string name="chgame">Выберите игру</string>
 </resources>

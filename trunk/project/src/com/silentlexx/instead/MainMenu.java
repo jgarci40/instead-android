@@ -58,7 +58,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private static final String BR = "<br>";
 	private  LastGame lastGame;
 	private final Handler h = new Handler();
-	private String out = null;
 	private TextView email;
 	private List<String> dnames = new ArrayList<String>();
 	private List<String> dtitles = new ArrayList<String>();	
@@ -70,7 +69,8 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
+		
+		
 		lastGame = new LastGame(this);
 		Globals.FlagSync = lastGame.getFlagSync();
 		dialog = new ProgressDialog(this);
@@ -94,8 +94,6 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		registerForContextMenu(listView);
 		showMenu();
 		if (!dwn) {
-			copyXml(Globals.GameListFileName);
-			copyXml(Globals.GameListAltFileName);
 			checkRC();
 		} 
 			if(Globals.idf!=null) IdfCopy();
@@ -112,7 +110,8 @@ public class MainMenu extends ListActivity implements ViewBinder {
 					break;
 
 				case DialogInterface.BUTTON_NEGATIVE:
-						return;
+					   Globals.zip=null;
+					break;
 					
 				}
 			}
@@ -120,7 +119,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setIcon(R.drawable.warning);
-		builder.setTitle(getString(R.string.instzipwarn));
+		builder.setTitle(getString(R.string.instzip));
 		builder.setMessage(getString(R.string.instzipwarn))
 				.setPositiveButton(getString(R.string.yes), dialogClickListener)
 				.setNegativeButton(getString(R.string.no), dialogClickListener)
@@ -144,7 +143,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.run))+ BR
 				+ getHtmlTagForSmall(lastGame.getTitle()),
-				R.drawable.lastgame));
+				R.drawable.game32));
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.gmlist))+
 				BR+
 				getHtmlTagForSmall(getString(R.string.gmwhat)),
@@ -455,7 +454,7 @@ break;
 			line = input.readLine();
 			try {
 				if (line.toLowerCase().matches(
-						"(.*)" + Globals.AppVer(this).toLowerCase() + "(.*)")) {
+						".*" + Globals.AppVer(this).toLowerCase() + ".*")) {
 					input.close();
 					return true;
 				}
@@ -491,12 +490,15 @@ break;
 				CreateRC();
 			}
 		} else {
-			(new File(Globals.getOutFilePath(Globals.Options))).delete();
-			   lastGame.clearAll();
+		//	(new File(Globals.getOutFilePath(Globals.Options))).delete();
+			(new File(this.getFilesDir()+"/"+Globals.GameListFileName)).delete();
+			(new File(this.getFilesDir()+"/"+Globals.GameListAltFileName)).delete();
+		//	lastGame.clearAll();
 			showMenu();
 			loadData();
 		}
-
+		copyXml(Globals.GameListFileName);
+		copyXml(Globals.GameListAltFileName);
 	}
 
 	private String getConf() {
@@ -539,7 +541,7 @@ break;
 			theme = "theme = android-xVGA\n";
 		} else
 		{
-			if (Build.VERSION.SDK_INT > 10) {
+			if (Build.VERSION.SDK_INT > 10 && Build.VERSION.SDK_INT < 14) {
 				theme = "theme = android-Honeycomb\n";
 			} else {
 				theme = "theme = android-WxVGA\n";
@@ -601,8 +603,8 @@ break;
 			} catch (Exception e) {
 				Log.e("Error", e.toString());
 			}
-			
-			
+			Globals.FlagSync = true;
+			lastGame.setFlagSync(Globals.FlagSync);			
 		}
 		
 	}
@@ -661,7 +663,7 @@ break;
 							    	dtitles.add(title);
 							    	menu.add(0, v.getId(), 0, title);
 							    }
-							} if(temp.endsWith(".idf")){
+							} else if(temp.endsWith(".idf")){
 								found = true;
 								dnames.add(temp);
 								dtitles.add(temp);
@@ -724,8 +726,7 @@ break;
 		if(s==null) return false;
 		if(s.endsWith(".idf")){
 			if(idf_act == LS_IDF || idf_act == RUN_IDF ){
-			Globals.idf = Globals.getOutFilePath(Globals.GameDir)+s;
-			startAppIdf();	
+				startApp(s);	
 			} else 
 				if(idf_act == DELETE_IDF) {
 			       Globals.idf = null;
@@ -758,25 +759,29 @@ break;
 	
 	
 	private void IdfCopy(){
-	  out  = Globals.getOutFilePath(Globals.GameDir + matchUrl(Globals.idf, ".*\\/(.*\\.idf)"));
-	  
+	
+  
+  /*
 	  if((new File(out)).isFile()){
 		   startAppIdf();
 		  return;
 	  }
-		
+	*/
 	  
 	DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				switch (which) {
 				case DialogInterface.BUTTON_NEGATIVE:
-					  startAppIdf();
+					Globals.idf=null;
 					break;
 				case DialogInterface.BUTTON_POSITIVE:
-
 					doCopy();
 					break;
+				case DialogInterface.BUTTON_NEUTRAL:
+					startAppIdf();
+					break;
+				
 				}
 			}				
 		};
@@ -789,11 +794,12 @@ break;
 		};
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setIcon(R.drawable.warning);
-		//builder.setTitle(getString(R.string.app_name));
-		builder.setMessage(getString(R.string.cpidf))
-				.setPositiveButton(R.string.yes, dialogClickListener)
-				.setNegativeButton(R.string.no, dialogClickListener)
-				.setOnCancelListener(dialogCancelListener)
+		builder.setTitle(getString(R.string.cpidf));
+		builder.setMessage(getString(R.string.cpidfwarn))
+				.setPositiveButton(R.string.sand, dialogClickListener)
+                .setNeutralButton(R.string.launch, dialogClickListener)		
+                .setNegativeButton(R.string.cancel, dialogClickListener)
+                .setOnCancelListener(dialogCancelListener)
 				.show();
 		
 		
@@ -804,13 +810,15 @@ break;
 				final Runnable d = new Runnable() {
 					@Override
 					public void run(){
+					   String g = matchUrl(Globals.idf, ".*\\/(.*\\.idf)");
+					   String	out  = Globals.getOutFilePath(Globals.GameDir + g);
 						try {
 							copyFile(Globals.idf, out);
 						} catch (Exception e) {
 							Log.e("Idf copy error", e.toString());
 						}
-						Globals.idf = out;
-						startAppIdf();
+						//Globals.idf = out;
+						startApp(g);
 					}};
 					//h.removeCallbacks(d);
 					

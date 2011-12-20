@@ -56,7 +56,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private Button btn_sync;
 	private Button btn_filtr;
 	private ImageView img_filtr;
-	private boolean fscan = false;
+	//private boolean fscan = false;
 	
 	private int listpos;
 	private int toppos;
@@ -501,9 +501,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	public void listUpdate() {
 	
-		gl = new GameList(this, getGameListName(listNo), fscan);
+		gl = new GameList(this, getGameListName(listNo));
 		lastGame.setFlagSync(Globals.FlagSync);
-		fscan = false;
+//		fscan = false;
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
 		int j = 0;
@@ -604,7 +604,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private void listDownload() {
 		dialog.setMessage(getString(R.string.init));
 		ShowDialog();
-		fscan = true;
+		//fscan = true;
+		Globals.FlagSync = true;
+		lastGame.setFlagSync(Globals.FlagSync);
 		new XmlDownloader(this, dialog, listNo);
 	}
 
@@ -617,7 +619,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setCancelable(true);
 
 		dwn = true;
-		fscan = true;
+		//fscan = true;
+		Globals.FlagSync = true;
+		lastGame.setFlagSync(Globals.FlagSync);
 		downloader = new GameDownloader(this, gl.getInf(GameList.URL,
 				index.get(item_index)), gl.getInf(GameList.NAME,
 				index.get(item_index)), dialog);
@@ -712,7 +716,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
     		if(gl.getInf(GameList.NAME, index.get(item_index)).equals(lastGame.getName())){
     			lastGame.clearGame();
     		}
-    		fscan = true;
+    		//fscan = true;
+    		Globals.FlagSync = true;
+    		lastGame.setFlagSync(Globals.FlagSync);
     		listUpdate();
     		showDeleteMsgDir();
     	}
