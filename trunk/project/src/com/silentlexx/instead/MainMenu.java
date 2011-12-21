@@ -59,6 +59,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private  LastGame lastGame;
 	private final Handler h = new Handler();
 	private TextView email;
+	private boolean ff = false;
 	private List<String> dnames = new ArrayList<String>();
 	private List<String> dtitles = new ArrayList<String>();	
 	private class ListItem {
@@ -98,6 +99,29 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		} 
 			if(Globals.idf!=null) IdfCopy();
 			if(Globals.zip!=null) ZipInstall();
+			if(Globals.qm!=null) QmInstall();
+	}
+
+	private void QmInstall() {
+	 String g = matchUrl(Globals.qm, ".*\\/(.*\\.qm)");
+	 String rangpath = Globals.getOutFilePath(Globals.GameDir + "rangers/"); 
+	 StringBuilder stringBuilder = new StringBuilder();
+	stringBuilder.append(rangpath);
+	stringBuilder.append("games/");
+	stringBuilder.append(g);
+	String out = 	stringBuilder.toString(); 
+	 if(!(new File(rangpath+Globals.MainLua)).exists()){
+		 Toast.makeText(this, getString(R.string.need_rangers), Toast.LENGTH_LONG).show();
+		 return;
+	 }
+	try {
+		copyFile(Globals.qm, out);
+	} catch (Exception e) {
+		 Toast.makeText(this, "Copy error!", Toast.LENGTH_LONG).show();
+		return;
+	}
+	 Toast.makeText(this, getString(R.string.rangers_inst), Toast.LENGTH_LONG).show();
+	 
 	}
 
 	private void ZipInstall() {
@@ -191,6 +215,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 				
 			case 3:
 			    idf_act = LS_IDF;
+			    ff = true;
 				getGamesLS();
 				break;		
 			case 4:
@@ -258,6 +283,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		checkRC();
 		if(Globals.idf!=null) IdfCopy();
 		if(Globals.zip!=null) ZipInstall();
+	    if(Globals.qm!=null) QmInstall();
 	}
 
 	public void showRunB() {
@@ -409,10 +435,12 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		break;	
 	case R.id.rmidf:
 		  	    idf_act = DELETE_IDF;
+		  	    ff = true;
 				getGamesLS();
 		break;	
 	case R.id.runidf:
   	    idf_act = RUN_IDF;
+  	    ff = true;
 		getGamesLS();
 break;	
 	}		
@@ -502,6 +530,17 @@ break;
 	}
 
 	private String getConf() {
+		final String BR = "\n";
+		final float xVGA = 320/240;
+		final float HVGA = 480/320;
+//		final float WxVGA = 800/480;
+		
+		String suff = "";
+		
+
+		suff = "-"+Globals.PORTRET_KEY.toUpperCase();
+		
+		
 		String locale = null;
 		if (Locale.getDefault().toString().equals("ru_RU")
 				|| Locale.getDefault().toString().equals("ru")) {
@@ -523,44 +562,39 @@ break;
 			locale = "lang = en\n";
 		}
 
-		String res = getRes();
-		String theme;
-		if (res.toLowerCase().matches("(.*)320x240(.*)")) {
-			theme = "theme = android-xVGA\n";
+		float res = getResRatio();
+		String theme = null;
+		if (res == xVGA) {
+			theme = "theme = android-xVGA"+suff+BR;
 		} else
 
-		if (res.toLowerCase().matches("(.*)480x320(.*)")) {
-			theme = "theme = android-HVGA\n";
-		} else
-
-		if (res.toLowerCase().matches("(.*)640x480(.*)")) {
-			theme = "theme = android-xVGA\n";
-		} else
-
-		if (res.toLowerCase().matches("(.*)800x600(.*)")) {
-			theme = "theme = android-xVGA\n";
+		if (res == HVGA) {
+			theme = "theme = android-HVGA"+suff+BR;
 		} else
 		{
 			if (Build.VERSION.SDK_INT > 10 && Build.VERSION.SDK_INT < 14) {
-				theme = "theme = android-Honeycomb\n";
+				theme = "theme = android-Honeycomb"+BR;
 			} else {
-				theme = "theme = android-WxVGA\n";
+				theme = "theme = android-WxVGA"+suff+BR;
 			}
-
 		}
+		Log.d("res", theme+" "+Float.toString(res));
+		
+
 		String s = "game = "+Globals.TutorialGame+"\nkbd = 2\nautosave = 1\nowntheme = 0\nhl = 0\nclick = 1\nmusic = 1\nfscale = 12\n"
-				+ locale + theme + "mode = " + res + "\n";
+				+ locale + theme + "\n";
 		return s;
 	}
 
-	private String getRes() {
+
+	private float getResRatio() {
 		Display display = getWindowManager().getDefaultDisplay();
-		int x = display.getWidth();
-		int y = display.getHeight();
+		float x = display.getWidth();
+		float y = display.getHeight();
 		if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-			return y + "x" + x;
+			return y/x;
 		} else {
-			return x + "x" + y;
+			return x/y;
 		}
 	}
 
@@ -636,7 +670,7 @@ break;
 	public void onCreateContextMenu(ContextMenu menu, View v,
 			ContextMenuInfo menuInfo) {
 		super.onCreateContextMenu(menu, v, menuInfo);
-				
+		if (ff){
 			boolean found = false;
 			dnames.clear();
 			dtitles.clear();
@@ -683,6 +717,9 @@ break;
 				}
 				
 				if(!found) Toast.makeText(this, getString(R.string.noidf), Toast.LENGTH_SHORT).show();
+			}
+			ff =false;	
+			
 	}
 
 	private String getIndexMenu(String s){

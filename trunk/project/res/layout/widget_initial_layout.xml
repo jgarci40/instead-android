@@ -7,11 +7,11 @@
  android:soundEffectsEnabled="false">
   	<ImageView 
  android:soundEffectsEnabled="false"
-  	    android:layout_width="48dip"
+  	    android:layout_width="40dip"
 		android:layout_height="match_parent"
   		android:id="@+id/widget_icon" 
    		android:src="@drawable/game48" 
-  		android:layout_gravity="center_vertical|center_horizontal" android:layout_weight="1"/>
+  		android:layout_gravity="center_vertical|center_horizontal" android:layout_weight="1" android:scaleType="fitStart" android:layout_marginTop="8dip"/>
   	
 <TextView android:textSize="12dip" android:textColor="#ffffffff"
      android:soundEffectsEnabled="false"
@@ -20,6 +20,6 @@ android:layout_gravity="center_horizontal" android:id="@+id/widget_text"
 android:background="@drawable/appwidget_text_background"
 android:layout_width="wrap_content" android:layout_height="wrap_content"
 android:shadowColor="#ff000000"
-android:shadowRadius="2.0" android:layout_weight="0" android:text="@string/add_widget" android:maxLines="3" android:ellipsize="end" android:minLines="1"/>
+android:shadowRadius="2.0" android:layout_weight="0" android:text="@string/add_widget" android:maxLines="2" android:minLines="1" android:ellipsize="none"/>
 </LinearLayout>
 
