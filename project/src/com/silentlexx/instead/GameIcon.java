@@ -69,14 +69,24 @@ public static String trimTitle(String t){
  String r = "";
 
  if(l>10){
-    for(int i = 0 ; i < l ; i=i+CHPL){
+  /*  for(int i = 0 ; i < l ; i=i+CHPL){
        int end = i+CHPL;
        if(end > l) end = l;
 	   r = r + t.substring(i, end)+"\n";
     }
+    */
+	 String suf = "";
+	 int end = l;
+     if(end>CHPL*2) {
+    	 end = (CHPL*2) - 3;
+    	 suf = "...";
+     }
+
+	 r = r + t.substring(0, CHPL)+"\n"+t.substring(CHPL, end)+suf;   
+	 
  } else return t;
 
-return r.substring(0, r.length()-1);
+return r;
 
 }
  
@@ -90,6 +100,10 @@ static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
         views.setTextViewText(R.id.widget_text, trimTitle(title));
     	if(game.endsWith(".idf")){
     		views.setImageViewResource(R.id.widget_icon, R.drawable.idf48);
+    //	} else if(game.equals("rangers")){
+    //		views.setImageViewResource(R.id.widget_icon, R.drawable.rangers48);    		
+    	} else {
+    		views.setImageViewResource(R.id.widget_icon, R.drawable.game48);
     	}
 
         

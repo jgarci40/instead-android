@@ -115,4 +115,6 @@
     <string name="sand">Copy</string>
     <string name="add_widget">Instead Game</string>
     <string name="chgame">Choose the game</string>
+    <string name="need_rangers">To install the game you want to install "Space Rangers"!</string>
+    <string name="rangers_inst">Game is installed. To run the "Space Rangers" and start a new game.</string>
 </resources>
