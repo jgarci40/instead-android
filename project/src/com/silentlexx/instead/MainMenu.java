@@ -120,8 +120,8 @@ public class MainMenu extends ListActivity implements ViewBinder {
 		 Toast.makeText(this, "Copy error!", Toast.LENGTH_LONG).show();
 		return;
 	}
+	 Globals.qm=null;
 	 Toast.makeText(this, getString(R.string.rangers_inst), Toast.LENGTH_LONG).show();
-	 
 	}
 
 	private void ZipInstall() {
