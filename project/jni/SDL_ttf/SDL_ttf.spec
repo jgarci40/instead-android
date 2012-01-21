@@ -1,5 +1,5 @@
 %define name SDL_ttf
-%define version 2.0.10
+%define version 2.0.11
 %define release 1
 
 Summary: Simple DirectMedia Layer - Sample TrueType Font Library

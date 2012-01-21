@@ -10,10 +10,12 @@ libSDL_ttf_la_SOURCES =		\
 	SDL_ttf.c
 
 EXTRA_DIST =			\
+	Android.mk		\
 	CHANGES			\
 	version.rc		\
-	VisualC.zip		\
-	Xcode.tar.gz		\
+	VisualC			\
+	Xcode			\
+	Xcode-iOS		\
 	MPWmake.sea.bin		\
 	Watcom-Win32.zip	\
 	SDL_ttf.spec		\

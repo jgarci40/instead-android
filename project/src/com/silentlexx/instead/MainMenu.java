@@ -15,8 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -46,10 +44,7 @@ import android.widget.SimpleAdapter.ViewBinder;
 import android.widget.Toast;
 
 public class MainMenu extends ListActivity implements ViewBinder {
-	private final int LS_IDF = 0;
-	private final int DELETE_IDF = 1;
-	private final int RUN_IDF = 3;
-	private int idf_act = LS_IDF;
+
 	private ProgressDialog dialog;
 	protected boolean dwn = false;
 	protected boolean onpause = false;
@@ -60,8 +55,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	private final Handler h = new Handler();
 	private TextView email;
 	private boolean ff = false;
-	private List<String> dnames = new ArrayList<String>();
-	private List<String> dtitles = new ArrayList<String>();	
+
 	private class ListItem {
 		public String text;
 		public int icon;
@@ -103,7 +97,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	}
 
 	private void QmInstall() {
-	 String g = matchUrl(Globals.qm, ".*\\/(.*\\.qm)");
+	 String g = Globals.matchUrl(Globals.qm, ".*\\/(.*\\.qm)");
 	 String rangpath = Globals.getOutFilePath(Globals.GameDir + "rangers/"); 
 	 StringBuilder stringBuilder = new StringBuilder();
 	stringBuilder.append(rangpath);
@@ -160,18 +154,26 @@ public class MainMenu extends ListActivity implements ViewBinder {
 
 	private void showMenu(){
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
-
+/*
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.app_name))+ BR
 				+ getHtmlTagForSmall(getString(R.string.start)),
 				R.drawable.start));
+	*/
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.start)),
+				R.drawable.start));
 		
-		listData.add(addListItem(getHtmlTagForName(getString(R.string.run))+ BR
-				+ getHtmlTagForSmall(lastGame.getTitle()),
-				R.drawable.game32));
+
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.gmlist))+
 				BR+
 				getHtmlTagForSmall(getString(R.string.gmwhat)),
 				R.drawable.gamelist));
+		
+		listData.add(addListItem(getHtmlTagForName(getString(R.string.favorits))+
+				BR+
+				getHtmlTagForSmall(getString(R.string.favfolder)),
+				R.drawable.folder_star));		
+		
+
 		
 		listData.add(addListItem(getHtmlTagForName(getString(R.string.dirlist))+
 				BR+
@@ -206,17 +208,15 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			case 0:
 				startAppAlt();
 				break;
-			case 1:
-				startApp(lastGame.getName());
-				break;
 			case 2:
+				startFav();
+				break;
+			case 1:
 				startGM();
 				break;
 				
 			case 3:
-			    idf_act = LS_IDF;
-			    ff = true;
-				getGamesLS();
+				startGD();
 				break;		
 			case 4:
 				startOpt();
@@ -231,6 +231,16 @@ public class MainMenu extends ListActivity implements ViewBinder {
 
 
 	
+	private void startFav() {
+		if (checkInstall()) {
+			Intent myIntent = new Intent(this, FavoritList.class);
+			startActivity(myIntent);
+		} else {
+			checkRC();
+		}
+		
+	}
+
 	private void openMarket(){
 	try {	
 		String url = "market://details?id=com.silentlexx.instead";
@@ -353,6 +363,15 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			checkRC();
 		}
 	}
+	
+	private void startGD() {
+		if (checkInstall()) {
+			Intent myIntent = new Intent(this, GameDirs.class);
+			startActivity(myIntent);
+		} else {
+			checkRC();
+		}
+	}
 
 	@Override
 	protected void onPause() {
@@ -433,6 +452,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	case R.id.market:
 			openMarket();
 		break;	
+/*		
 	case R.id.rmidf:
 		  	    idf_act = DELETE_IDF;
 		  	    ff = true;
@@ -443,6 +463,7 @@ public class MainMenu extends ListActivity implements ViewBinder {
   	    ff = true;
 		getGamesLS();
 break;	
+*/
 	}		
 		return true;
 	}
@@ -531,9 +552,9 @@ break;
 
 	private String getConf() {
 		final String BR = "\n";
-		final float xVGA = 320/240;
-		final float HVGA = 480/320;
-//		final float WxVGA = 800/480;
+		final float xVGA = (float)320 / (float)240;
+		final float HVGA = (float)480 / (float)320;
+//		final float WxVGA = (float)800 / (float)480;
 		
 		String suff = "";
 		
@@ -563,6 +584,7 @@ break;
 		}
 
 		float res = getResRatio();
+		//Log.d("RES",Float.toString(res)+" == "+Float.toString(xVGA));
 		String theme = null;
 		if (res == xVGA) {
 			theme = "theme = android-xVGA"+suff+BR;
@@ -578,10 +600,10 @@ break;
 				theme = "theme = android-WxVGA"+suff+BR;
 			}
 		}
-		Log.d("res", theme+" "+Float.toString(res));
+//		Log.d("res", theme+" "+Float.toString(res));
 		
 
-		String s = "game = "+Globals.TutorialGame+"\nkbd = 2\nautosave = 1\nowntheme = 0\nhl = 0\nclick = 1\nmusic = 1\nfscale = 12\n"
+		String s = "game = "+Globals.TutorialGame+"\nkbd = 2\nautosave = 1\nowntheme = 0\nhl = 0\nclick = 1\nmusic = 1\nfscale = 12\njustufy = 0\n"
 				+ locale + theme + "\n";
 		return s;
 	}
@@ -671,128 +693,23 @@ break;
 			ContextMenuInfo menuInfo) {
 		super.onCreateContextMenu(menu, v, menuInfo);
 		if (ff){
-			boolean found = false;
-			dnames.clear();
-			dtitles.clear();
-			if(idf_act == DELETE_IDF){
-				menu.setHeaderTitle(getString(R.string.rmidf));
-				} else {
-				menu.setHeaderTitle(getString(R.string.run));
-				}
-				
-				File f = new File(Globals.getOutFilePath(Globals.GameDir));
-				if(f.isDirectory()){
-				if(f.list().length>0){
-					String files[] = f.list();
-					for (String temp : files) {
-						File file = new File(f, temp);
 
-						if(idf_act == LS_IDF) {
-							if(file.isDirectory()){
-							    if(isWorking(temp)){	
-							    	found = true;
-							    	String title = getTitle(temp);
-							    	if (title==null) title = temp;
-							    	dnames.add(temp);
-							    	dtitles.add(title);
-							    	menu.add(0, v.getId(), 0, title);
-							    }
-							} else if(temp.endsWith(".idf")){
-								found = true;
-								dnames.add(temp);
-								dtitles.add(temp);
-								menu.add(0, v.getId(), 0, temp);			
-							} 
-							
-						} else if(idf_act == DELETE_IDF || idf_act == RUN_IDF) {
-							if(file.isFile() && temp.endsWith(".idf")){
-								found = true;
-								dnames.add(temp);
-								dtitles.add(temp);
-								menu.add(0, v.getId(), 0, temp);			
-							}						   
-						} 
-					}
-				}
-				}
-				
-				if(!found) Toast.makeText(this, getString(R.string.noidf), Toast.LENGTH_SHORT).show();
 			}
 			ff =false;	
 			
 	}
 
-	private String getIndexMenu(String s){
-		String n = null;
-		for(int  i = 0; i < dtitles.size(); i++){
-			if(s.toLowerCase().equals(dtitles.get(i).toLowerCase())){
-				return dnames.get(i);			
-			}
-		}
-		
-		return n;
-	}
-	
-	private boolean isWorking(String f){
-		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;		
-		return (new File(path)).isFile();
-	}
-	
-	private String getTitle(String f){
-		String t = f;
-		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;
-		String line = null;
-		BufferedReader input = null;
-		try {
-				input = new BufferedReader(new InputStreamReader(
-				new FileInputStream(new File(path)), "UTF-8"));
-				line = input.readLine();
-				input.close();
 
-		} catch (Exception e) {
-			return t;
-		} 
-		
-		return matchUrl(line, ".*\\$Name:(.*)\\$");
-	}
 	
 	
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
-		String s = getIndexMenu(item.getTitle().toString()); 
-		if(s==null) return false;
-		if(s.endsWith(".idf")){
-			if(idf_act == LS_IDF || idf_act == RUN_IDF ){
-				startApp(s);	
-			} else 
-				if(idf_act == DELETE_IDF) {
-			       Globals.idf = null;
-			       (new File (Globals.getOutFilePath(Globals.GameDir)+s)).delete();	
-			       Toast.makeText(this, getString(R.string.delgame), Toast.LENGTH_SHORT).show();				
-				}	
-				
-		} else {
-			startApp(s);
-		}
+
 		return true;
 	}
 	
-	private void getGamesLS(){
-		openContextMenu(listView);
-	}
-	
-	public static String matchUrl(String url, String patt){
-		Matcher m;  
-	try{
-		m = Pattern.compile(patt).matcher(url);
-	  } catch(NullPointerException e){
-		  return null;
-	  }
-		
-		if(m.find()) return	m.toMatchResult().group(1);
-		return null;
-    }
-	
+
+
 	
 	
 	private void IdfCopy(){
@@ -847,7 +764,7 @@ break;
 				final Runnable d = new Runnable() {
 					@Override
 					public void run(){
-					   String g = matchUrl(Globals.idf, ".*\\/(.*\\.idf)");
+					   String g = Globals.matchUrl(Globals.idf, ".*\\/(.*\\.idf)");
 					   String	out  = Globals.getOutFilePath(Globals.GameDir + g);
 						try {
 							copyFile(Globals.idf, out);
@@ -862,7 +779,7 @@ break;
 					Thread t = new Thread(){
 					@Override
 					public void run(){
-					h.post(d);					
+					h.postDelayed(d, 100);					
 					}
 					};
 					t.start();

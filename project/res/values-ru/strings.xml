@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Instead</string>
     <string name="run">Начать игру</string>
-    <string name="gmlist">Список игр</string>
+    <string name="gmlist">Репозиторий игр</string>
     <string name="exit">Выйти</string>
     <string name="writefile">Запись файла</string>
     <string name="writefileerorr">Ошибка записи файла </string>
@@ -97,10 +97,10 @@
     <string name="resetsd">Эта операция сбросит настройки игры, переустановит файлы игры на SD карте, но не затронет ваши игры и сохранения. Продолжить?</string>
     <string name="atention">Внимание!</string>
     <string name="scroff">Держать экран включенным</string>
-    <string name="start">Запустить</string>
+    <string name="start">Начать игру</string>
     <string name="theme">Тема: </string>
     <string name="portrait">Портретная ориентация экрана</string>
-    <string name="dirlist">Папка с играми</string>
+    <string name="dirlist">Все игры</string>
     <string name="gamein">Игры в</string>
     <string name="cpidf">Копировать файл игры в папку Instead?</string>
     <string name="copy">Копирование...</string>
@@ -117,4 +117,15 @@
     <string name="chgame">Выберите игру</string>
     <string name="need_rangers">Для установки данной игры требуется установить "Космические рейнджеры"!</string>
     <string name="rangers_inst">Игра установлена. Для запустите "Космические рейнджеры" и начните новую игру.</string>
+    <string name="addtodesc">Создать ярлык на рабочем столе</string>
+    <string name="favorits">Любимые игры</string>
+    <string name="delfromfav">Удалить из списка любимых</string>
+    <string name="addtofav">Добавить в список любимых</string>
+    <string name="lastgame">Последняя сыгранная игра</string>
+    <string name="favfolder">Список любимых игр</string>
+    <string name="refresh">Обновить</string>
+    <string name="deletedfav"> удалена с любимых.</string>
+    <string name="addedfav">добавлена к любимым.</string>
+    <string name="game">Игра </string>
+    <string name="clearfav">Очистить список любимых</string>
 </resources>

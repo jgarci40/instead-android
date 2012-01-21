@@ -1,10 +1,13 @@
 package com.silentlexx.instead;
 
+import java.io.File;
+
 import javax.microedition.khronos.egl.*;
 import android.app.*;
 import android.content.*;
 import android.content.pm.ActivityInfo;
 import android.view.*;
+import android.widget.Toast;
 import android.os.*;
 import android.util.Log;
 import android.graphics.*;
@@ -47,6 +50,28 @@ public class SDLActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		// Log.v("SDL", "onCreate()");
 		super.onCreate(savedInstanceState);
+		Intent intent = getIntent(); 
+		if (intent.getAction()!=null){
+			game = intent.getAction();
+			  if(Globals.isWorking(game)==false && (game.endsWith(".idf")==false || 
+					  (new File(Globals.getOutFilePath(Globals.GameDir
+			    				+ game)).exists())==false)){	
+				  
+					Toast.makeText(this, getString(R.string.game)+" \""+game+"\" "+getString(R.string.ag_new), 
+							Toast.LENGTH_SHORT).show();		
+					finish();
+			  			}
+			  
+		} else {		
+		Bundle b = intent.getExtras();
+		if(b!=null){
+			game = b.getString("game");
+			idf = b.getString("idf");
+		}
+		}
+		
+		
+		
 		lastGame = new LastGame(this);
        // if (lastGame.getOreintation()==Globals.PORTRAIT) {
 		if(Options.isPortrait()){
@@ -56,6 +81,7 @@ public class SDLActivity extends Activity {
         }
 		
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
+
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
@@ -74,21 +100,11 @@ public class SDLActivity extends Activity {
 		
 		//if(first_run){
 		first_run=false;
-		Log.v("SDL", "onCreate()");		
-		Intent intent = getIntent(); 
-		if (intent.getAction()!=null){
-			game = intent.getAction();
-		} else {		
-		Bundle b = intent.getExtras();
-		if(b!=null){
-			game = b.getString("game");
-			idf = b.getString("idf");
-		}
-		}
-		
+
+
 		//Log.d("Game", intent.getStringExtra("game"));
 		//if(idf!=null) Log.d("idf", idf);
-		if(game!=null){Log.v("SDL", "Start game: "+game); }else{Log.v("SDL", "Start default game");};
+		//if(game!=null){Log.v("SDL", "Start game: "+game); }else{Log.v("SDL", "Start default game");};
 		//finish();
 		
 		
@@ -103,6 +119,13 @@ public class SDLActivity extends Activity {
 		//}
 	}
 
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+	//	MenuInflater inflater = getMenuInflater();
+	//	inflater.inflate(R.menu.dummy, menu);
+		return true;
+	}
+	
 	@Override
 	public void onSaveInstanceState(Bundle savedInstanceState) {
 		savedInstanceState.putBoolean("first_run", first_run);

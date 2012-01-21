@@ -1,6 +1,11 @@
 package com.silentlexx.instead;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -113,6 +118,65 @@ class Globals {
 			}
 		}
 	}
+	
+	public static boolean isWorking(String f){
+		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;		
+		return (new File(path)).isFile();
+	}
+	
+	public static String getTitle(String t){
+		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + t + Globals.MainLua;
+		String line = null;
+		BufferedReader input = null;
+		try {
+				input = new BufferedReader(new InputStreamReader(
+				new FileInputStream(new File(path)), "UTF-8"));
+				line = input.readLine();
+				input.close();
+
+		} catch (Exception e) {
+			return t;
+		} 
+		String s;
+		
+		try {
+		s = matchUrl(line, ".*\\$Name:(.*)\\$");
+		while(s.startsWith(" ")){
+			s = s.substring(1, s.length());
+		} 
+		}  catch (Exception e){
+			return t;
+		}
+		return s;
+	}
+	
+	public static String matchUrl(String url, String patt){
+		Matcher m;  
+	try{
+		m = Pattern.compile(patt).matcher(url);
+	  } catch(NullPointerException e){
+		  return null;
+	  }
+		
+		if(m.find()) return	m.toMatchResult().group(1);
+		return null;
+    }
+	
+	public static int getIcon(String game){
+		int ico;
+    	if(game.endsWith(".idf")) {
+			ico = R.drawable.idf48; 		
+		} else if(game.equals("rangers")){
+			ico = R.drawable.rangers48;
+		} else if(game.equals("urq")){
+			ico = R.drawable.urq48;
+		}   else		{
+			ico = R.drawable.game48; 
+		}
+    	return ico;
+	}
+	
+	
 }
 
 
