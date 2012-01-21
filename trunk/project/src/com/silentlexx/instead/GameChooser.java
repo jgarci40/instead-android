@@ -1,10 +1,8 @@
 package com.silentlexx.instead;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -94,38 +92,14 @@ private static final String TITLE_KEY = "title_";
 	}
 
 	
-	private boolean isWorking(String f){
-		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;		
-		return (new File(path)).isFile();
-	}
-	
-	private String getTitle(String f){
-		String t = f;
-		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + f + Globals.MainLua;
-		String line = null;
-		BufferedReader input = null;
-		try {
-				input = new BufferedReader(new InputStreamReader(
-				new FileInputStream(new File(path)), "UTF-8"));
-				line = input.readLine();
-				input.close();
-
-		} catch (Exception e) {
-			return t;
-		} 
-		
-		return matchUrl(line, ".*\\$Name:(.*)\\$");
-	}
-	
 
 	private String getIndexMenu(String s){
 		String n = null;
-		for(int  i = 0; i < dtitles.size(); i++){
-			if(s.toLowerCase().equals(dtitles.get(i).toLowerCase())){
-				return dnames.get(i);			
+		for(int  i = 0; i < dnames.size(); i++){
+			if(dnames.get(i).startsWith(s)){
+				return dnames.get(i).substring(s.length(),dnames.get(i).length());			
 			}
 		}
-		
 		return n;
 	}
 
@@ -177,7 +151,6 @@ private static final String TITLE_KEY = "title_";
 			
 private void readFolder() {
 
-			boolean found = false;
 			dnames.clear();
 			dtitles.clear();
 
@@ -191,17 +164,15 @@ private void readFolder() {
 						File file = new File(f, temp);
 
 							if(file.isDirectory()){
-							    if(isWorking(temp)){	
-							    	found = true;
-							    	String title = getTitle(temp);
+							    if(Globals.isWorking(temp)){	
+							    	String title = Globals.getTitle(temp);
 							    	if (title==null) title = temp;
-							    	dnames.add(temp);
+							    	dnames.add(title+temp);
 							    	dtitles.add(title);
 							    }
 							} else
 							if(temp.endsWith(".idf")){
-								found = true;
-								dnames.add(temp);
+								dnames.add(temp+temp);
 								dtitles.add(temp);
 		
 							} 
@@ -211,10 +182,12 @@ private void readFolder() {
 				}
 				}
 				
-				if(!found){ Toast.makeText(this, getString(R.string.noidf), Toast.LENGTH_SHORT).show();
-				finish();
-				}else{
+				if(dnames.size()>0){ 
+				Collections.sort(dtitles);
 				h.postDelayed(r, 100);
+				}else{
+					Toast.makeText(this, getString(R.string.noidf), Toast.LENGTH_SHORT).show();
+				finish();
 				}
 }	
 	

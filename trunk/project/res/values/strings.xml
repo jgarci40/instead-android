@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Instead</string>
     <string name="run">Start game</string>
-    <string name="gmlist">Game list</string>
+    <string name="gmlist">Games repository</string>
     <string name="exit">Exit</string>
     <string name="writefile">Save file</string>
     <string name="writefileerorr">File saving error</string>
@@ -88,7 +88,7 @@
     <string name="mailme">Send me email</string>
     <string name="ver">Version</string>
     <string name="tutorial">Tutorial</string>
-    <string name="gmwhat">Install and run the game</string>
+    <string name="gmwhat">Install and launch games</string>
     <string name="optwhat">Screen, sound and font</string>
     <string name="marketon">Rate, write a comment</string>
     <string name="market">Instead on the Market</string>
@@ -97,10 +97,10 @@
     <string name="resetsd">This operation will reset the game, reinstall the game files on the SD card, but will not affect your game and save. Continue anyway?</string>
     <string name="atention">Attention!</string>
     <string name="scroff">Keep the screen turned</string>
-    <string name="start">Start</string>
+    <string name="start">Start game</string>
     <string name="theme">Theme: </string>
     <string name="portrait">Portrait screen orientation</string>
-    <string name="dirlist">Folder with games</string>
+    <string name="dirlist">All games</string>
     <string name="gamein">Games in</string>
     <string name="cpidf">Copy the game file to a folder Instead?</string>
     <string name="copy">Copying...</string>
@@ -117,4 +117,15 @@
     <string name="chgame">Choose the game</string>
     <string name="need_rangers">To install the game you want to install "Space Rangers"!</string>
     <string name="rangers_inst">Game is installed. To run the "Space Rangers" and start a new game.</string>
+    <string name="addtodesc">Create shortcut on desktop</string>
+    <string name="favorits">Favorite games</string>
+    <string name="delfromfav">Remove from favorites</string>
+    <string name="addtofav">Add to your favorites</string>
+    <string name="lastgame">Last game played</string>
+    <string name="favfolder">List of favorite games</string>
+    <string name="refresh">Refresh</string>
+    <string name="deletedfav"> removed from favorites.</string>
+    <string name="addedfav"> added  to favorites.</string>
+    <string name="game">Game </string>
+    <string name="clearfav">Clear all favorites</string>
 </resources>

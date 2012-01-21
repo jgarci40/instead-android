@@ -247,36 +247,34 @@ public class Options extends Activity {
 
 	public static boolean isPortrait(){
 		boolean b = false;
+		boolean c = true;
 		String path = Globals.getOutFilePath(Globals.Options);
 		BufferedReader input = null;
 		try {
 			input = new BufferedReader(new InputStreamReader(
 					new FileInputStream(new File(path)), "UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-		} catch (FileNotFoundException e) {
-		}
 
-		try {
+
 			String line = null;
 			while ((line = input.readLine()) != null) {
 
-				try {
-					if (line.toLowerCase().matches("theme.*"+Globals.PORTRET_KEY.toLowerCase()+".*")) {
-						b = true;
-					} 
-				} catch (NullPointerException e) {
+				if (line.toLowerCase().matches("owntheme\\ *=\\ *1.*")){
+						c = false;
 				}
-			}
-
-		} catch (IOException e) {
-		} catch (NullPointerException e) {
+				
+				if (line.toLowerCase().matches("theme.*"+Globals.PORTRET_KEY.toLowerCase()+".*")) {
+						b = true;
+				} 
+				}
+	
+		} catch (Exception e) {
 		}
-
-		try {
-			input.close();
-		} catch (IOException e) {
+				
+		if(c && b){
+			return true;
+		} else {
+			return false;
 		}
-		return b;
 	}
 	
 	

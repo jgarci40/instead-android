@@ -93,29 +93,21 @@ return r;
  
 static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
             int appWidgetId, String game, String title) {
-    //    Log.d("w", "updateAppWidget appWidgetId=" + appWidgetId+", game="+game);
-       		
+    		
 		
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_initial_layout);
-        views.setTextViewText(R.id.widget_text, trimTitle(title));
-    	if(game.endsWith(".idf")){
+        views.setTextViewText(R.id.widget_text, title);
+/*
+        if(game.endsWith(".idf")){
     		views.setImageViewResource(R.id.widget_icon, R.drawable.idf48);
-    //	} else if(game.equals("rangers")){
-    //		views.setImageViewResource(R.id.widget_icon, R.drawable.rangers48);    		
     	} else {
     		views.setImageViewResource(R.id.widget_icon, R.drawable.game48);
     	}
-
+*/
         
         Intent active = new Intent(context, SDLActivity.class);
         active.setAction(game);
-/*	
-        Bundle b = new Bundle();
-		b.putString("game", game);
-		active.putExtras(b);
-*/
-        
-      //  active.putExtra(KEY_RECEIVER, appWidgetId);
+
         PendingIntent actionPendingIntent = PendingIntent.getActivity(context, 0, active, 0);
 
     	views.setOnClickPendingIntent(R.id.widget, actionPendingIntent);

@@ -10,8 +10,10 @@ import java.util.regex.Pattern;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
+import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.Intent.ShortcutIconResource;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -56,6 +58,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	private Button btn_sync;
 	private Button btn_filtr;
 	private ImageView img_filtr;
+    private	Favorites favGame;
 	//private boolean fscan = false;
 	
 	private int listpos;
@@ -67,6 +70,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
 		index = new ArrayList<Integer>();
 		dialog = new ProgressDialog(this);
 		dialog.setTitle(getString(R.string.wait));
@@ -75,6 +79,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		dialog.setCancelable(false);
         setContentView(R.layout.gmtab);
     	lastGame = new LastGame(this);
+    	favGame = new Favorites(this);
         filter = lastGame.getFiltr();
         listNo = lastGame.getListNo();
         lang_filter = lastGame.getLang();
@@ -149,7 +154,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
 		    @Override
 		    public boolean onItemLongClick(AdapterView<?> av, View v, int pos, long id) {
-				//super.onItemLongClick(av, v, pos, id);
+
 				if (!lwhack) {
 					item_index = pos;
 					g = gl.getInf(GameList.TITLE, index.get(item_index));
@@ -165,12 +170,12 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 		    @Override
 		    public void onItemClick(AdapterView<?> av, View v, int pos, long id) {
-		  //  	if (!lwhack) {
+
 		    	item_index = pos;
 					g = gl.getInf(GameList.TITLE, index.get(item_index));
 					openGame();
 				}
-		//    }
+
 		});
 
 	}
@@ -195,7 +200,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 	
 	private void openCtxMenu(){
-		openContextMenu(this.getListView());		
+		openContextMenu(listView);		
 	}
 	
 	private void setTabsG() {
@@ -300,10 +305,19 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			if (gl.getFlag(index.get(item_index)) == GameList.INSTALLED) {
 				menu.add(0, v.getId(), 0, getString(R.string.menustart));
 				if ((new File(Globals.getAutoSavePath(gl.getInf(GameList.NAME,
-						index.get(item_index))))).exists()) {
+					index.get(item_index))))).exists()) {
 					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
 				}
+				if(favGame.isFavorite(gl.getInf(GameList.NAME,
+					index.get(item_index)))){
+					menu.add(0, v.getId(), 0, getString(R.string.delfromfav));
+				} else {
+					menu.add(0, v.getId(), 0, getString(R.string.addtofav));
+				}
+				
+				menu.add(0, v.getId(), 0, getString(R.string.addtodesc));
 				menu.add(0, v.getId(), 0, getString(R.string.menudel));
+				
 			}
 
 			if (gl.getFlag(index.get(item_index)) == GameList.NEW) {
@@ -317,12 +331,19 @@ public class GameMananger extends ListActivity implements ViewBinder {
 					menu.add(0, v.getId(), 0, getString(R.string.menunewstart));
 				}
 				menu.add(0, v.getId(), 0, getString(R.string.menuupd));
+				if(favGame.isFavorite(gl.getInf(GameList.NAME,
+						index.get(item_index)))){
+						menu.add(0, v.getId(), 0, getString(R.string.delfromfav));
+					} else {
+						menu.add(0, v.getId(), 0, getString(R.string.addtofav));
+					}
+				menu.add(0, v.getId(), 0, getString(R.string.addtodesc));
 				menu.add(0, v.getId(), 0, getString(R.string.menudel));
 			}
 
 			menu.add(0, v.getId(), 0, getString(R.string.agame));
 			} else 
-			if(menu_mode==MENU_FILTER){
+				if(menu_mode==MENU_FILTER){
 				menu.setHeaderTitle(getString(R.string.filtr));
 				menu.add(0, v.getId(), 0, getString(R.string.all));
 				menu.add(0, v.getId(), 0, getString(R.string.installed));
@@ -349,7 +370,15 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			gameDownload();
 		} else if (item.getTitle() == getString(R.string.agame)) {
 			startAbout();
-		} else {
+		} else if (item.getTitle() == getString(R.string.addtodesc)) {
+		    addShortcut();
+		} else if (item.getTitle() == getString(R.string.addtofav)) {
+		    addFavorites();
+		} else if (item.getTitle() == getString(R.string.delfromfav)) {
+		    delFavorites();
+		} else 
+		
+		{
 			//FILTER Menu
 			 if (item.getTitle() == getString(R.string.installed)) {
 				filter = GameList.INSTALLED;
@@ -463,7 +492,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		default:
 			s = getString(R.string.ag_new);
 		}
-		return "<br><small><i>" + s + "</i></small>";
+		return getHtmlTagForComment(s);
+	}
+
+	public static String getHtmlTagForComment(String s) {
+		return  "<br><small><i>" + s + "</i></small>";
 	}
 
 	public void onError(String s) {
@@ -495,7 +528,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		}
 	}
 
-	private String getHtmlTagForName(String s) {
+	public static String getHtmlTagForName(String s) {
 		return "<b>" + s + "</b>";
 	}
 
@@ -716,11 +749,10 @@ public class GameMananger extends ListActivity implements ViewBinder {
     		if(gl.getInf(GameList.NAME, index.get(item_index)).equals(lastGame.getName())){
     			lastGame.clearGame();
     		}
-    		//fscan = true;
     		Globals.FlagSync = true;
     		lastGame.setFlagSync(Globals.FlagSync);
-    		listUpdate();
     		showDeleteMsgDir();
+    		listUpdate();
     	}
     };
 	
@@ -741,12 +773,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		ShowDialog();
 		dialog.setMessage(getString(R.string.deleting));
 		dialog.setCancelable(false);
-		//h.removeCallbacks(deleteDir);
-    	//h.postDelayed(deleteDir, 100);
+
     	Thread t = new Thread(){
     		@Override 
     		public void run(){
-    			h.post(deleteDir);
+    			h.postDelayed(deleteDir, 100);
     		}
     	};
     	t.start();
@@ -833,6 +864,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			startActivity(myIntent);
 		}
 	}
+	
 
 	@Override
 	protected void onPause() {
@@ -993,6 +1025,46 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			
 		}
 		return true;
+	}
+	
+	private void addShortcut(){  
+    	String game = gl.getInf(GameList.NAME, index.get(item_index));
+		String title = gl.getInf(GameList.TITLE, index.get(item_index));
+		
+	    Intent shortcut = new Intent("com.android.launcher.action.INSTALL_SHORTCUT");
+
+	    shortcut.putExtra(Intent.EXTRA_SHORTCUT_NAME, title);  
+
+        Intent shortcutIntent = new Intent(Intent.ACTION_MAIN);
+        shortcutIntent.putExtra(Globals.ApplicationName, game);
+        
+	    ComponentName comp = new ComponentName(this.getPackageName(), ".Shortcut");  
+	    shortcutIntent.setComponent(comp);
+	    shortcut.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent); 
+	    
+	    ShortcutIconResource iconRes = Intent.ShortcutIconResource.fromContext(this, 
+	    		Globals.getIcon(game));  
+	    shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE, iconRes);  
+
+	    sendBroadcast(shortcut);  
+	}
+	
+
+	private void addFavorites(){
+    	String game = gl.getInf(GameList.NAME, index.get(item_index));
+		String title = gl.getInf(GameList.TITLE, index.get(item_index));
+		favGame.add(game, title);
+		Toast.makeText(this, getString(R.string.game)+" \""+title+"\" "+getString(R.string.addedfav), 
+				Toast.LENGTH_SHORT).show();
+	}
+
+	private void delFavorites(){
+    	String game = gl.getInf(GameList.NAME, index.get(item_index));
+		String title = gl.getInf(GameList.TITLE, index.get(item_index));
+		
+		favGame.remove(game);
+		Toast.makeText(this, getString(R.string.game)+" \""+title+"\" "+getString(R.string.deletedfav), 
+				Toast.LENGTH_SHORT).show();
 	}
 	
 }
