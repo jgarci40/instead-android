@@ -4,12 +4,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.util.Log;
 
 class Globals {
 
@@ -124,29 +126,70 @@ class Globals {
 		return (new File(path)).isFile();
 	}
 	
+
 	public static String getTitle(String t){
+		final int N = 6;
+		String lang = Lang.EN;
+		if (       Locale.getDefault().toString().equals("ru_RU")
+				|| Locale.getDefault().toString().equals("ru") 
+				|| Locale.getDefault().toString().equals("uk_UA")
+				|| Locale.getDefault().toString().equals("uk")
+				|| Locale.getDefault().toString().equals("be_BE")
+				|| Locale.getDefault().toString().equals("be")) {
+			 lang = Lang.RU;
+		}
 		String path = Globals.getOutFilePath(Globals.GameDir) + "/" + t + Globals.MainLua;
 		String line = null;
+		String ru = null;
+		String en = null;
+//		boolean urq = false;
 		BufferedReader input = null;
 		try {
 				input = new BufferedReader(new InputStreamReader(
 				new FileInputStream(new File(path)), "UTF-8"));
-				line = input.readLine();
+				for (int i =0; i < N ; i++){
+					line = input.readLine();	
+					if(line!=null){
+						if (line.matches(".*\\$Name.*\\(ru\\).*:.*")){			
+							ru = matchUrl(line, ".*\\$Name.*\\(ru\\).*:(.*)\\$");
+						} else 
+							if(line.matches(".*\\$Name.*:.*")) {
+								en = matchUrl(line, ".*\\$Name.*:(.*)\\$");
+							}
+							/*
+							else if (line.matches(".*urq.lua.*")) {
+								urq = true;
+							}
+							*/
+							}
+				}
 				input.close();
 
+
 		} catch (Exception e) {
+			Log.e("INSTEAD","Title 1", e);
 			return t;
 		} 
-		String s;
-		
-		try {
-		s = matchUrl(line, ".*\\$Name:(.*)\\$");
+		String s = null;
+	try {
+
+		if(lang.equals(Lang.RU) && ru!=null) {
+			s = ru;
+		} else if(en!=null){
+			s = en;
+		} else {
+			s = t;
+		}
+			
 		while(s.startsWith(" ")){
 			s = s.substring(1, s.length());
 		} 
 		}  catch (Exception e){
+			Log.e("INSTEAD","Title 2", e);
 			return t;
 		}
+	
+		//if(urq) s= "[URQ] "+s;
 		return s;
 	}
 	

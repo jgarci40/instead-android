@@ -45,7 +45,7 @@ public class Options extends Activity {
 	private CheckBox click;
 	private CheckBox ourtheme;
 	private CheckBox scroff;
-	//private CheckBox portrait;
+	private CheckBox keyb;
 	private Spinner spinner;
 	private LastGame lastGame;
 	private int theme;
@@ -85,7 +85,7 @@ public class Options extends Activity {
 		click = (CheckBox) findViewById(R.id.click);
 		ourtheme = (CheckBox) findViewById(R.id.ourtheme);
 		scroff = (CheckBox) findViewById(R.id.scroff);
-//		portrait = (CheckBox) findViewById(R.id.portrait);
+		keyb = (CheckBox) findViewById(R.id.virtkey);
 		spinner =(Spinner) findViewById(R.id.spinner);
 		readDir();
   		ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, arr);
@@ -291,7 +291,7 @@ public class Options extends Activity {
 
 		
 		scroff.setChecked(lastGame.getScreenOff());
-
+		keyb.setChecked(lastGame.getKeyboard());
 		
 		String path = Globals.getOutFilePath(Globals.Options);
 		BufferedReader input = null;
@@ -368,15 +368,9 @@ public class Options extends Activity {
 	}
 
 	private void rewriteRC() {
-	/*
-	    if(portrait.isChecked()){
-	    	lastGame.setOreintetion(Globals.PORTRAIT);
-	    } else {
-	    	lastGame.setOreintetion(Globals.LANDSCAPE);	
-	    }
-	*/
 	
 		lastGame.setScreenOff(scroff.isChecked());
+		lastGame.setKeyboard(keyb.isChecked());
 		
 		String path = Globals.getOutFilePath(Globals.Options);
 		String rc = "";
