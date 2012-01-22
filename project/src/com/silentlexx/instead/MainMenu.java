@@ -774,7 +774,7 @@ break;
 						//Globals.idf = out;
 						startApp(g);
 					}};
-					//h.removeCallbacks(d);
+
 					
 					Thread t = new Thread(){
 					@Override

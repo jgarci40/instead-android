@@ -46,7 +46,9 @@ public class GameDirs extends ListActivity  implements ViewBinder  {
 	private ProgressDialog dialog;
 	private LastGame lastGame;
     private Favorites favGame; 
-	
+	private int listpos;
+	private int toppos;
+    
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -204,7 +206,7 @@ public class GameDirs extends ListActivity  implements ViewBinder  {
 	
 
 	private void listUpdate(){
-		
+		listPosSave();
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 		
 		for(int i=0; i < dtitles.size(); i++){
@@ -222,7 +224,7 @@ public class GameDirs extends ListActivity  implements ViewBinder  {
 				new int[] { R.id.list_text });
 		simpleAdapter.setViewBinder(this);
 		setListAdapter(simpleAdapter);
-		
+		listPosRestore();
 	}
 	
 	
@@ -494,7 +496,16 @@ public class GameDirs extends ListActivity  implements ViewBinder  {
 			return super.onOptionsItemSelected(item);
 		}
 	}
-
 	
+
+	private void listPosSave() {
+		listpos = listView.getFirstVisiblePosition();
+		View firstVisibleView = listView.getChildAt(0);
+		toppos = (firstVisibleView == null) ? 0 : firstVisibleView.getTop();
+	}
+
+	private void listPosRestore() {
+		listView.setSelectionFromTop(listpos, toppos);
+	}
 	
 }

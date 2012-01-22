@@ -171,7 +171,8 @@ typedef enum
                                    does send code 73, not 117) */
     SDL_SCANCODE_HOME = 74,
     SDL_SCANCODE_PAGEUP = 75,
-    SDL_SCANCODE_DELETE = 76,
+    SDL_SCANCODE_DELETE = 42,
+/*    SDL_SCANCODE_DELETE = 76, */
     SDL_SCANCODE_END = 77,
     SDL_SCANCODE_PAGEDOWN = 78,
     SDL_SCANCODE_RIGHT = 79,

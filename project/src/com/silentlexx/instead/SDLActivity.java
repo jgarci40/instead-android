@@ -7,6 +7,7 @@ import android.app.*;
 import android.content.*;
 import android.content.pm.ActivityInfo;
 import android.view.*;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 import android.os.*;
 import android.util.Log;
@@ -34,7 +35,7 @@ public class SDLActivity extends Activity {
 	private static String game = null;
 	private static String idf = null;
 	private static int i_s = KOLL;
-	
+	private static boolean keyb = true;
 	private static Handler h;
 	private  LastGame lastGame;
 	// Load the .so
@@ -46,6 +47,15 @@ public class SDLActivity extends Activity {
 		System.loadLibrary("main");
 	}
 
+	public static void showKeyboard(Context c){
+		if(keyb){
+			InputMethodManager imm = (InputMethodManager) c.getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.showSoftInput(mSurface, InputMethodManager.SHOW_FORCED);
+		}
+	}
+
+
+	
 	// Setup
 	protected void onCreate(Bundle savedInstanceState) {
 		// Log.v("SDL", "onCreate()");
@@ -73,6 +83,7 @@ public class SDLActivity extends Activity {
 		
 		
 		lastGame = new LastGame(this);
+		keyb = lastGame.getKeyboard();
        // if (lastGame.getOreintation()==Globals.PORTRAIT) {
 		if(Options.isPortrait()){
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -265,7 +276,11 @@ public class SDLActivity extends Activity {
 		mSurface.flipEGL();
 	}
 
-
+	public static int getResY() {
+		int y = display.getHeight();
+		return y;
+	}
+	
 	public static String getRes() {
 		int x = display.getWidth();
 		int y = display.getHeight();
@@ -615,14 +630,17 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 		default:
 			key = keyCode;
 		}
+		
 
+		
 		if (event.getAction() == KeyEvent.ACTION_DOWN) {
 			// Log.v("SDL", "key down: " + keyCode);
+			
 			SDLActivity.onNativeKeyDown(key);
 			return true;
 		} else if (event.getAction() == KeyEvent.ACTION_UP) {
 			// Log.v("SDL", "key up: " + keyCode);
-
+			 
 			SDLActivity.onNativeKeyUp(key);
 			return true;
 		}
@@ -630,20 +648,47 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 		return false;
 	}
 
+	public void showKeybord(){
+		SDLActivity.showKeyboard(this.getContext());
+	//	SDLActivity.onNativeKeyUp(67);
+	}
+
+	private float pX =0;
+	private float pY =0;
+	private long pA = 0;
 	// Touch events
 	public boolean onTouch(View v, MotionEvent event) {
+		final int WAIT_TOUCH = 1000;
+		final int SQUAR_TOUCH = 10;
+	//	final int Y = SDLActivity.getResY() - (SDLActivity.getResY()/3);
 		SDLActivity.refreshOff();
 		int action = event.getAction();
 		float x = event.getX();
 		float y = event.getY();
 		float p = event.getPressure();
-
-		//Log.d("touch", Integer.toString(action)+"  "+Float.toString(p));
+		long s = event.getEventTime();
+		
+		
+		if(action==0) {
+			pA = s;
+			pX = x;
+			pY = y;
+		} else 	if(action==1) {
+			pA = s - pA;
+			pX = Math.abs(x - pX);
+			pY = Math.abs(y - pY);
+			if (pA > WAIT_TOUCH && pX < SQUAR_TOUCH && pY < SQUAR_TOUCH){
+					showKeybord();
+			}
+		}
+		
+		//Log.d("touch", Integer.toString(Y)+"  "+Float.toString(y));
 		// TODO: Anything else we need to pass?
 		SDLActivity.onNativeTouch(action, x, y, p);
 		return true;
 	}
 	
+ 
 
 
 	

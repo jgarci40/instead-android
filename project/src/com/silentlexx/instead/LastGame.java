@@ -14,6 +14,7 @@ public class LastGame {
     private MyPrefs pr;
     private boolean scroff;
     private boolean flagsync;
+    private boolean keyb;
     
 	LastGame(Context p){
 		pr = new MyPrefs(p, Globals.ApplicationName); 
@@ -24,6 +25,7 @@ public class LastGame {
  		name = pr.get("name", Globals.TutorialGame);
  		title = pr.get("title", title_def);
  		scroff = pr.get("scroff", true);
+ 		keyb = pr.get("keyb", true);
  		flagsync = pr.get("flagsync", true);
 	}
 	
@@ -36,6 +38,7 @@ public class LastGame {
 	public void clearAll(){
 		scroff = true;
 		flagsync = true;
+		keyb = true;
 		filtr = GameList.ALL;
  		list =  Globals.BASIC;		
  		lang = Globals.Lang.ALL;
@@ -110,6 +113,15 @@ public class LastGame {
 		Commit();
 	}
 
+	public boolean getKeyboard(){
+		return keyb;
+	}
+	
+	public void setKeyboard(boolean b){
+		keyb = b;
+		Commit();
+	}
+	
 	public boolean getFlagSync(){
 		return flagsync;
 	}
@@ -128,7 +140,8 @@ public class LastGame {
  		pr.set("lang", lang);
  		pr.set("name", name);
  		pr.set("title", title);		
- 		pr.set("scroff", scroff);		
+ 		pr.set("scroff", scroff);
+ 		pr.set("keyb", keyb);
  		pr.commit();
 	}
 	

@@ -252,7 +252,6 @@ class GameDownloader extends Thread {
 			public void run() {
 
 				Parent.gameIsDownload();
-				Parent.listUpdate();
 			}
 		}
 		Callback cb = new Callback();

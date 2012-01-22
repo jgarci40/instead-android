@@ -128,4 +128,6 @@
     <string name="addedfav"> added  to favorites.</string>
     <string name="game">Game </string>
     <string name="clearfav">Clear all favorites</string>
+    <string name="virtkey">Show virtual keyboard</string>
+    <string name="virtkey_t">For display keyboard in games click anywhere on the screen, hold more than 1 second and release</string>
 </resources>

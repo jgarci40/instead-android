@@ -34,7 +34,8 @@ public class FavoritList extends ListActivity  implements ViewBinder  {
 	private ListView listView;
 	protected int item_index;
     private boolean lwhack = false;
-
+	private int listpos;
+	private int toppos;
     private Favorites favGame; 
 	
 	
@@ -85,7 +86,7 @@ public class FavoritList extends ListActivity  implements ViewBinder  {
 	
 
 	private void listUpdate(){
-		
+		listPosSave();
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 		
 		int n = favGame.size();
@@ -100,7 +101,7 @@ public class FavoritList extends ListActivity  implements ViewBinder  {
 				new int[] { R.id.list_text });
 		simpleAdapter.setViewBinder(this);
 		setListAdapter(simpleAdapter);
-		
+		listPosRestore();
 	}
 	
 	
@@ -314,7 +315,17 @@ public class FavoritList extends ListActivity  implements ViewBinder  {
 
 		
 	}
+	
 
+	private void listPosSave() {
+		listpos = listView.getFirstVisiblePosition();
+		View firstVisibleView = listView.getChildAt(0);
+		toppos = (firstVisibleView == null) ? 0 : firstVisibleView.getTop();
+	}
+	
+	private void listPosRestore() {
+		listView.setSelectionFromTop(listpos, toppos);
+	}
 	
 }
 

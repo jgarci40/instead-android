@@ -36,6 +36,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class GameMananger extends ListActivity implements ViewBinder {
+
 	private final int MENU_LIST=1;
 	private final int MENU_FILTER=2;
 	private int menu_mode = MENU_LIST;
@@ -52,6 +53,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	protected boolean onpause = false;
 	private boolean dwn = false;
 	private boolean isdwn = false;
+	private  boolean list_fresh = true;
 	private GameDownloader downloader = null;
 	private Button basic_btn;
 	private Button alter_btn;
@@ -96,7 +98,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			public void onClick(View arg0) {
 				listNo = Globals.BASIC;
 				lastGame.setListNo(listNo);
-				listPosClear();
+				list_fresh = true;
 				setTabs();
 				checkXml();
 			}
@@ -144,7 +146,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			public void onClick(View arg0) {
 				listNo = Globals.ALTER;
 				lastGame.setListNo(listNo);
-				listPosClear();
+				list_fresh = true;
 				setTabs();
 				checkXml();
 			}
@@ -178,6 +180,8 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 		});
 
+		
+		checkXml();
 	}
 
 	private void setFilter(){
@@ -383,21 +387,25 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			 if (item.getTitle() == getString(R.string.installed)) {
 				filter = GameList.INSTALLED;
 				lastGame.setFiltr(filter);
+				list_fresh = true;
 				setFiltrImg();
 				listUpdate();
 			} else if (item.getTitle() == getString(R.string.isnew)) {
 				filter = GameList.NEW;
 				lastGame.setFiltr(filter);
+				list_fresh = true;
 				setFiltrImg();
 				listUpdate();
 			} else if (item.getTitle() == getString(R.string.isupd)) {
 				filter = GameList.UPDATE;
 				lastGame.setFiltr(filter);
+				list_fresh = true;
 				setFiltrImg();
 				listUpdate();
 			} else if (item.getTitle() == getString(R.string.all)) {
 				filter = GameList.ALL;
 				lastGame.setFiltr(filter);
+				list_fresh = true;
 				setFiltrImg();
 				listUpdate();
 			} else	return false;
@@ -438,16 +446,19 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		case R.id.langru_menu_btn:
 			lang_filter = Globals.Lang.RU;
 			lastGame.setLang(lang_filter);
+			list_fresh = true;
 			listUpdate();
 			return true;
 		case R.id.langen_menu_btn:
 			lang_filter = Globals.Lang.EN;
 			lastGame.setLang(lang_filter);
+			list_fresh = true;
 			listUpdate();
 			return true;
 		case R.id.langall_menu_btn:
 			lang_filter = Globals.Lang.ALL;
 			lastGame.setLang(lang_filter);
+			list_fresh = true;
 			listUpdate();
 			return true;
 		default:
@@ -533,10 +544,11 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	public void listUpdate() {
-	
+
+		listPosSave();
+
 		gl = new GameList(this, getGameListName(listNo));
 		lastGame.setFlagSync(Globals.FlagSync);
-//		fscan = false;
 		List<Map<String, ListItem>> listData = new ArrayList<Map<String, ListItem>>();
 
 		int j = 0;
@@ -590,26 +602,28 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			}
 		}
 
-		SimpleAdapter simpleAdapter = new SimpleAdapter(this, listData,
-				R.layout.list_item, new String[] { LIST_TEXT },
-				new int[] { R.id.list_text });
-		simpleAdapter.setViewBinder(this);
-		setListAdapter(simpleAdapter);
-		listPosRestore();
-
 		// FIXME android 1.6 refresh bug workaround
 		if (Build.VERSION.SDK_INT == Build.VERSION_CODES.DONUT) {
 			setTabsG();
 		} else {
 			setTabs();
 		}
+		
+		SimpleAdapter simpleAdapter = new SimpleAdapter(this, listData,
+				R.layout.list_item, new String[] { LIST_TEXT },
+				new int[] { R.id.list_text });
+		simpleAdapter.setViewBinder(this);
+		setListAdapter(simpleAdapter);
 
+
+		
+		if(!list_fresh) {
+			listPosRestore();
+   		} else {
+   			list_fresh = false;	
+   		}
 	}
 
-	private void listPosClear() {
-		listpos = 0;
-		toppos = 0;
-	}
 
 	private void listPosSave() {
 		listpos = listView.getFirstVisiblePosition();
@@ -644,7 +658,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	private void Download() {
-		listPosSave();
 		dialog.setMessage(getString(R.string.init));
 
 		ShowDialogCancel();
@@ -683,6 +696,9 @@ public class GameMananger extends ListActivity implements ViewBinder {
 					Toast.LENGTH_LONG).show();
 		} catch (ArrayIndexOutOfBoundsException e) {
 		}
+
+			list_fresh = false;
+			listUpdate();
 
 	}
 
@@ -769,7 +785,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
     }
     
     private void Delete() {
-		listPosSave();
+	//	listPosSave();
 		ShowDialog();
 		dialog.setMessage(getString(R.string.deleting));
 		dialog.setCancelable(false);
@@ -850,9 +866,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 	}
 
 	private void startApp() {
-		listPosSave();
 		if (checkInstall()) {
-
 			String game = gl.getInf(GameList.NAME, index.get(item_index));
 			String title = gl.getInf(GameList.TITLE, index.get(item_index));
 			if(!isURQ(title)) return;
@@ -891,9 +905,7 @@ public class GameMananger extends ListActivity implements ViewBinder {
 				if (dialog.isShowing()) {
 					dialog.dismiss();
 				}
-
 				gameIsDownload();
-
 			} else {
 				if (onpause && !dialog.isShowing()) {
 					dialog.show();
@@ -903,14 +915,12 @@ public class GameMananger extends ListActivity implements ViewBinder {
 			if (dialog.isShowing()) {
 				dialog.dismiss();
 			}
-
 			// FIXME hz
 			if (isdwn) {
 				gameIsDownload();
 			}
 		}
-
-		checkXml();
+//		checkXml();
 		onpause = false;
 		// Log.d(Globals.TAG, "GM: Resume");
 	}
@@ -974,16 +984,16 @@ public class GameMananger extends ListActivity implements ViewBinder {
 
 	@Override
 	public void onSaveInstanceState(Bundle savedInstanceState) {
-		listPosSave();
 		savedInstanceState.putBoolean("onpause", onpause);
 		savedInstanceState.putBoolean("dwn", dwn);
 		savedInstanceState.putBoolean("isdwn", isdwn);
-		savedInstanceState.putString("lang_filter", lang_filter);
-		savedInstanceState.putInt("listNo", listNo);
-		savedInstanceState.putInt("filter", filter);
+		savedInstanceState.putBoolean("list_fresh", list_fresh);
+//		savedInstanceState.putBoolean("list_save", list_save);
 		savedInstanceState.putInt("listpos", listpos);
 		savedInstanceState.putInt("toppos", toppos);
-		savedInstanceState.putInt("pose", item_index);
+		/*		savedInstanceState.putString("lang_filter", lang_filter);
+		savedInstanceState.putInt("listNo", listNo);
+		savedInstanceState.putInt("filter", filter); */
 		super.onSaveInstanceState(savedInstanceState);
 	}
 
@@ -992,14 +1002,14 @@ public class GameMananger extends ListActivity implements ViewBinder {
 		super.onRestoreInstanceState(savedInstanceState);
 		dwn = savedInstanceState.getBoolean("dwn");
 		isdwn = savedInstanceState.getBoolean("isdwn");
+		list_fresh =  savedInstanceState.getBoolean("list_fresh");
+//		list_save =  savedInstanceState.getBoolean("list_save");
 		onpause = savedInstanceState.getBoolean("onpause");
-		lang_filter = savedInstanceState.getString("lang_filter");
-		listNo = savedInstanceState.getInt("listNo");
-		filter = savedInstanceState.getInt("filter");
-		item_index = savedInstanceState.getInt("pose");
 		listpos = savedInstanceState.getInt("listpos");
 		toppos = savedInstanceState.getInt("toppos");
-		listPosRestore();
+		//	lang_filter = savedInstanceState.getString("lang_filter");
+	//	listNo = savedInstanceState.getInt("listNo");
+	//	filter = savedInstanceState.getInt("filter");
 	}
 
 	
