@@ -128,6 +128,6 @@
     <string name="addedfav">добавлена к любимым.</string>
     <string name="game">Игра </string>
     <string name="clearfav">Очистить список любимых</string>
-    <string name="virtkey">Показывать виртуальная клавиатура</string>
+    <string name="virtkey">Виртуальная клавиатура</string>
     <string name="virtkey_t">Для показа клавиатуры в играх нажать в любом месте экрана, подержать больше 1 секунды и отпустить</string>
 </resources>
