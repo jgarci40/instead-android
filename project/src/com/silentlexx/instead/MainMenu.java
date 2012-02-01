@@ -279,10 +279,20 @@ public class MainMenu extends ListActivity implements ViewBinder {
 	}
 
 	private void sendEmail() {
-		String url = "mailto:silentlexx@gmail.com";
-		Intent i = new Intent(Intent.ACTION_VIEW);
-		i.setData(Uri.parse(url));
-		startActivity(i);
+		String [] addr = new String[1];
+		addr[0] = "silentlexx@gmail.com";
+		
+	try{
+		
+		Intent sendIntent = new Intent(Intent.ACTION_SEND, Uri.parse("mailto:"));
+		sendIntent.setClassName("com.google.android.gm","com.google.android.gm.ComposeActivityGmail");
+		sendIntent.putExtra(Intent.EXTRA_EMAIL, addr);
+		sendIntent.putExtra(Intent.EXTRA_SUBJECT, Globals.ApplicationName+" v."+Globals.AppVer(this));
+		startActivity(sendIntent);
+
+	 } catch (Exception e){
+		 Toast.makeText(this, "Gmail not installed!", Toast.LENGTH_LONG).show();
+	 }
 	}
 
 	public void showRun() {

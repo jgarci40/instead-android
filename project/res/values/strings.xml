@@ -130,4 +130,8 @@
     <string name="clearfav">Clear all favorites</string>
     <string name="virtkey">Virtual keyboard</string>
     <string name="virtkey_t">For display keyboard in games click anywhere on the screen, hold more than 1 second and release</string>
+    <string name="in_text">Enter text:</string>
+    <string name="clear">Clear</string>
+    <string name="enter">Enter</string>
+    <string name="close">Close</string>
 </resources>

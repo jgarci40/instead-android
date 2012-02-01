@@ -7,4 +7,4 @@
     android:paddingLeft="5dip"
     android:minHeight="?android:attr/listPreferredItemHeight"
     android:drawableLeft="@drawable/newinstall"
-    android:drawablePadding="10dip" android:layout_height="80dip"/>
+    android:drawablePadding="10dip" android:layout_height="80dip" android:background="@drawable/items"/>

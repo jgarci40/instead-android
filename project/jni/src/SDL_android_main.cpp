@@ -17,6 +17,9 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 	return JNI_VERSION_1_4;
 }
 
+
+
+
 // Start up the SDL app
 extern "C" void Java_com_silentlexx_instead_SDLActivity_nativeInit(
 		JNIEnv* env, jclass cls, jstring jpath, jstring jres, jstring jgame, jstring jidf ) {
