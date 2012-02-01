@@ -7,7 +7,6 @@ import android.app.*;
 import android.content.*;
 import android.content.pm.ActivityInfo;
 import android.view.*;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 import android.os.*;
 import android.util.Log;
@@ -38,6 +37,8 @@ public class SDLActivity extends Activity {
 	private static boolean keyb = true;
 	private static Handler h;
 	private  LastGame lastGame;
+	private static InputDialog input;
+	
 	// Load the .so
 	static {
 		System.loadLibrary("SDL");
@@ -49,17 +50,34 @@ public class SDLActivity extends Activity {
 
 	public static void showKeyboard(Context c){
 		if(keyb){
-			InputMethodManager imm = (InputMethodManager) c.getSystemService(Context.INPUT_METHOD_SERVICE);
-			imm.showSoftInput(mSurface, InputMethodManager.SHOW_FORCED);
+			input.show();
+	//		input.focus();
+	//		InputMethodManager imm = (InputMethodManager) c.getSystemService(Context.INPUT_METHOD_SERVICE);
+	//		imm.showSoftInput(mSurface, InputMethodManager.SHOW_FORCED);
 		}
 	}
 
-
+	public static void inputText(String s){
+		//Log.d("Input ",s);
+		//nativeInput(s);
+		int len = s.length();
+		if(len>Globals.IN_MAX){
+			s = s.substring(0, Globals.IN_MAX);
+			len = s.length();
+		}
+		
+		for(int i=0; i < len; i++){
+			char c = s.charAt(i);
+			Keys.key(c);
+		}
+		Keys.Enter();
+	}
 	
 	// Setup
 	protected void onCreate(Bundle savedInstanceState) {
 		// Log.v("SDL", "onCreate()");
 		super.onCreate(savedInstanceState);
+		
 		Intent intent = getIntent(); 
 		if (intent.getAction()!=null){
 			game = intent.getAction();
@@ -84,7 +102,10 @@ public class SDLActivity extends Activity {
 		
 		lastGame = new LastGame(this);
 		keyb = lastGame.getKeyboard();
-       // if (lastGame.getOreintation()==Globals.PORTRAIT) {
+		if(keyb){
+			input = new InputDialog(this, getString(R.string.in_text));
+		}
+		// if (lastGame.getOreintation()==Globals.PORTRAIT) {
 		if(Options.isPortrait()){
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         } else {
@@ -634,12 +655,12 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
 		
 		if (event.getAction() == KeyEvent.ACTION_DOWN) {
-			// Log.v("SDL", "key down: " + keyCode);
+		//	Log.v("SDL", "key down: " + keyCode);
 			
 			SDLActivity.onNativeKeyDown(key);
 			return true;
 		} else if (event.getAction() == KeyEvent.ACTION_UP) {
-			// Log.v("SDL", "key up: " + keyCode);
+		//	 Log.v("SDL", "key up: " + keyCode);
 			 
 			SDLActivity.onNativeKeyUp(key);
 			return true;

@@ -130,4 +130,8 @@
     <string name="clearfav">Очистить список любимых</string>
     <string name="virtkey">Виртуальная клавиатура</string>
     <string name="virtkey_t">Для показа клавиатуры в играх нажать в любом месте экрана, подержать больше 1 секунды и отпустить</string>
+    <string name="in_text">Введите текст:</string>
+    <string name="clear">Стереть</string>
+    <string name="enter">Ввод</string>
+    <string name="close">Закрыть</string>
 </resources>

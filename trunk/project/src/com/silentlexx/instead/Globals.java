@@ -50,6 +50,7 @@ class Globals {
 	public static final int AUTO = 0;
 	public static final int PORTRAIT = 1;
 	public static final int LANDSCAPE = 2;
+	public static final int IN_MAX = 16;	
 
 	//VARS
     public static boolean FlagSync = false;	
@@ -150,11 +151,11 @@ class Globals {
 				for (int i =0; i < N ; i++){
 					line = input.readLine();	
 					if(line!=null){
-						if (line.matches(".*\\$Name.*\\(ru\\).*:.*")){			
-							ru = matchUrl(line, ".*\\$Name.*\\(ru\\).*:(.*)\\$");
+						if (line.matches(".*\\$Name\\(ru\\):.*")){			
+							ru = matchUrl(line, ".*\\$Name\\(ru\\):(.*)\\$");
 						} else 
-							if(line.matches(".*\\$Name.*:.*")) {
-								en = matchUrl(line, ".*\\$Name.*:(.*)\\$");
+							if(line.matches(".*\\$Name:.*")) {
+								en = matchUrl(line, ".*\\$Name:(.*)\\$");
 							}
 							/*
 							else if (line.matches(".*urq.lua.*")) {
