@@ -25,11 +25,11 @@
 			android:layout_height="40dip" android:scaleType="fitCenter"
 			android:layout_width="wrap_content" android:layout_marginBottom="1dip"
 			android:layout_marginTop="1dip" android:src="@drawable/folder_star"
-			android:layout_alignParentLeft="true" android:layout_alignParentTop="true"></ImageView>
+			android:layout_alignParentLeft="true" android:layout_alignParentTop="true" android:layout_marginLeft="10dip"></ImageView>
 
 
 		<TextView android:id="@+id/tv" android:layout_width="wrap_content"
-			android:textSize="20sp" android:gravity="center" android:layout_marginLeft="5dip"
+			android:textSize="18sp" android:gravity="center" android:layout_marginLeft="5dip"
 			android:shadowDx="1" android:shadowDy="1" android:shadowRadius="2"
 			android:text="@string/favorits" android:layout_toRightOf="@+id/logo"
 			android:layout_height="wrap_content" android:layout_centerVertical="true" android:shadowColor="#000000" android:textColor="#FFFFFF"></TextView>
@@ -50,7 +50,7 @@
                 android:scrollbars="vertical"
                 android:layout_width="fill_parent"
                 android:layout_height="fill_parent"
-                 android:scrollbarAlwaysDrawVerticalTrack="true" android:smoothScrollbar="true"/>
+                 android:scrollbarAlwaysDrawVerticalTrack="true" android:smoothScrollbar="true" android:background="@drawable/wallpaper"/>
         </LinearLayout>
     </TableRow>
 </TableLayout>

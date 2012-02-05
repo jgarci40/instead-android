@@ -5,6 +5,6 @@
   android:minHeight="79dp"
   android:updatePeriodMillis="86400000"
   android:initialLayout="@layout/widget_initial_layout"
-  android:resizeMode="none" android:previewImage="@drawable/icon"
+  android:resizeMode="none" android:previewImage="@drawable/oldbook_widget"
   android:configure="com.silentlexx.instead.GameChooser" >
 </appwidget-provider>

@@ -13,7 +13,6 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Intent.ShortcutIconResource;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Html;
 import android.view.ContextMenu;
@@ -44,9 +43,6 @@ public class FavoritList extends ListActivity  implements ViewBinder  {
 		super.onCreate(savedInstanceState);
         setContentView(R.layout.fvhead);
         listView = getListView();
-		listView.setBackgroundColor(Color.BLACK);
-		listView.setBackgroundDrawable(this.getResources().getDrawable(
-				R.drawable.wallpaper));
 		registerForContextMenu(listView);
 		
 		favGame = new Favorites(this);

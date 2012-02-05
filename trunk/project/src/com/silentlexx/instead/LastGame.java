@@ -15,6 +15,7 @@ public class LastGame {
     private boolean scroff;
     private boolean flagsync;
     private boolean keyb;
+    private boolean keyvol;
     
 	LastGame(Context p){
 		pr = new MyPrefs(p, Globals.ApplicationName); 
@@ -26,6 +27,7 @@ public class LastGame {
  		title = pr.get("title", title_def);
  		scroff = pr.get("scroff", true);
  		keyb = pr.get("keyb", true);
+ 		keyvol = pr.get("keyvol", false);
  		flagsync = pr.get("flagsync", true);
 	}
 	
@@ -39,6 +41,7 @@ public class LastGame {
 		scroff = true;
 		flagsync = true;
 		keyb = true;
+		keyvol = false;
 		filtr = GameList.ALL;
  		list =  Globals.BASIC;		
  		lang = Globals.Lang.ALL;
@@ -131,6 +134,15 @@ public class LastGame {
 		Commit();
 	}
 
+	public boolean getOvVol(){
+		return keyvol;
+	}
+	
+	public void setOvVol(boolean b){
+		keyvol = b;
+		Commit();
+	}
+
 	
 	
 	private void Commit() {
@@ -142,6 +154,7 @@ public class LastGame {
  		pr.set("title", title);		
  		pr.set("scroff", scroff);
  		pr.set("keyb", keyb);
+ 		pr.set("keyvol", keyvol);
  		pr.commit();
 	}
 	
