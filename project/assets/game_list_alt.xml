@@ -135,6 +135,15 @@
 	</game>
 
 	<game>
+		<name>babkin_sunduk</name>
+		<title>Прабабкин сундук</title>
+		<url>http://speakingstone.com/games/babkin_sunduk.zip</url>
+		<size>178861</size>
+		<descurl>http://instead.syscall.ru/forum/viewtopic.php?id=510</descurl>
+		<lang>ru</lang>
+	</game>
+
+	<game>
 		<name>taiga</name>
 		<title>Дикая тайга</title>
 		<url>http://oreolek.ru/my_games/taiga.zip</url>

@@ -24,7 +24,7 @@
 			        android:layout_marginTop="1dip"
 			        android:adjustViewBounds="true"
 			        android:scaleType="fitCenter"
-			        android:src="@drawable/gamelist" >
+			        android:src="@drawable/gamelist" android:layout_marginLeft="10dip">
 			    </ImageView>
 
 			    <TextView
@@ -41,7 +41,7 @@
 			        android:shadowRadius="2"
 			        android:text="@string/gmlist"
 			        android:textColor="#FFFFFF"
-			        android:textSize="20sp" android:layout_marginLeft="5dip">
+			        android:textSize="18sp" android:layout_marginLeft="5dip">
 			    </TextView>
 
 			    <LinearLayout
@@ -61,14 +61,13 @@
 			            android:id="@+id/img_filtr"
 			            android:layout_width="32dip"
 			            android:layout_height="32dip"
-			            android:layout_marginRight="10dip"
 			            android:src="@drawable/all" />
 
 			        <Button
 			            android:id="@+id/btn_sync"
 			            android:layout_width="48dip"
 			            android:layout_height="32dip"
-			            android:background="@drawable/refresh_small" >
+			            android:background="@drawable/refresh_small" android:layout_marginRight="10dip">
 			        </Button>
 			    </LinearLayout>
 			</RelativeLayout>
@@ -104,7 +103,7 @@
 			<ListView android:id="@android:id/list" android:scrollbars="vertical"
 				android:scrollbarAlwaysDrawVerticalTrack="true"
 				android:layout_width="fill_parent" android:layout_height="fill_parent"
-				android:smoothScrollbar="true" />
+				android:smoothScrollbar="true" android:background="@drawable/wallpaper"/>
 		</LinearLayout>
 	</TableRow>
 </TableLayout>

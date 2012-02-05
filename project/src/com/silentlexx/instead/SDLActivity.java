@@ -30,7 +30,7 @@ public class SDLActivity extends Activity {
 	// Audio
 	private static Thread mAudioThread;
 	private static AudioTrack mAudioTrack;
-	
+    private static boolean overrVol = false;
 	private static String game = null;
 	private static String idf = null;
 	private static int i_s = KOLL;
@@ -38,6 +38,8 @@ public class SDLActivity extends Activity {
 	private static Handler h;
 	private  LastGame lastGame;
 	private static InputDialog input;
+	private static AudioManager audioManager;
+	private static Context Ctx; 
 	
 	// Load the .so
 	static {
@@ -56,7 +58,27 @@ public class SDLActivity extends Activity {
 	//		imm.showSoftInput(mSurface, InputMethodManager.SHOW_FORCED);
 		}
 	}
+	
 
+	public static void setVol(int dvol){
+
+		int minvol = 0;
+		int maxvol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+		int curvol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+		curvol += dvol;
+		if(curvol<minvol) {
+			curvol = minvol;
+		} else if (curvol>maxvol){
+			curvol = maxvol;
+		}
+		 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, curvol, 0);
+	}
+
+	
+	public static boolean getOvVol(){
+		return overrVol;
+	}
+	
 	public static void inputText(String s){
 		//Log.d("Input ",s);
 		//nativeInput(s);
@@ -77,7 +99,7 @@ public class SDLActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		// Log.v("SDL", "onCreate()");
 		super.onCreate(savedInstanceState);
-		
+		Ctx = this;
 		Intent intent = getIntent(); 
 		if (intent.getAction()!=null){
 			game = intent.getAction();
@@ -101,10 +123,17 @@ public class SDLActivity extends Activity {
 		
 		
 		lastGame = new LastGame(this);
+		overrVol = lastGame.getOvVol();
 		keyb = lastGame.getKeyboard();
 		if(keyb){
 			input = new InputDialog(this, getString(R.string.in_text));
 		}
+
+		if(!overrVol){
+			audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+		}
+		
+		
 		// if (lastGame.getOreintation()==Globals.PORTRAIT) {
 		if(Options.isPortrait()){
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -121,6 +150,8 @@ public class SDLActivity extends Activity {
 		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,
 				Globals.ApplicationName);
 
+
+		
 		h = new Handler();
 		
 		IntentFilter filter = new IntentFilter(Intent.ACTION_USER_PRESENT);
@@ -638,20 +669,29 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 	// Key events
 	public boolean onKey(View v, int keyCode, KeyEvent event) {
 		SDLActivity.refreshOff();
-		int key;
+		int key = keyCode ;
+		
+		if(SDLActivity.getOvVol()){
 		switch (keyCode) {
-		// case KeyEvent.KEYCODE_BACK: key = KeyEvent.KEYCODE_0; break;
-		// case KeyEvent.KEYCODE_MENU: key = KeyEvent.KEYCODE_M; break;
 		case KeyEvent.KEYCODE_VOLUME_UP:
 			key = KeyEvent.KEYCODE_DPAD_UP;
+			//key = KeyEvent.KEYCODE_PAGE_UP;
 			break;
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
 			key = KeyEvent.KEYCODE_DPAD_DOWN;
+			//key = KeyEvent.KEYCODE_PAGE_DOWN;
 			break;
-		default:
-			key = keyCode;
 		}
-		
+		} else {
+			switch (keyCode) {
+			case KeyEvent.KEYCODE_VOLUME_UP:
+				SDLActivity.setVol(1);
+				break;
+			case KeyEvent.KEYCODE_VOLUME_DOWN:
+				SDLActivity.setVol(-1);
+				break;
+			}
+		}
 
 		
 		if (event.getAction() == KeyEvent.ACTION_DOWN) {

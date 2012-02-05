@@ -113,7 +113,7 @@
     <string name="cpidfwarn">This will provide an opportunity to run the game directly with Instead.</string>
     <string name="launch">Launch</string>
     <string name="sand">Copy</string>
-    <string name="add_widget">Instead Game</string>
+    <string name="add_widget">Instead game (widget)</string>
     <string name="chgame">Choose the game</string>
     <string name="need_rangers">To install the game you want to install "Space Rangers"!</string>
     <string name="rangers_inst">Game is installed. To run the "Space Rangers" and start a new game.</string>
@@ -133,5 +133,8 @@
     <string name="in_text">Enter text:</string>
     <string name="clear">Clear</string>
     <string name="enter">Enter</string>
-    <string name="close">Close</string>
+    <string name="close">Hide</string>
+    <string name="volume">Volume:</string>
+    <string name="override_vol">VolUp/VolDown as Up/Down</string>
+    <string name="add_cut">Instead game (shortcut)</string>
 </resources>

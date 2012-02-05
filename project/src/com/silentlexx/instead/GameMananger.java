@@ -86,9 +86,6 @@ public class GameMananger extends ListActivity implements ViewBinder {
         listNo = lastGame.getListNo();
         lang_filter = lastGame.getLang();
         listView = getListView();
-		listView.setBackgroundColor(Color.BLACK);
-		listView.setBackgroundDrawable(this.getResources().getDrawable(
-				R.drawable.wallpaper));
 		registerForContextMenu(listView);
 
 		basic_btn = (Button) findViewById(R.id.basic_btn);

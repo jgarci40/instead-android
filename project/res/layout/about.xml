@@ -1,27 +1,27 @@
 <LinearLayout android:id="@+id/Linear01"
 	android:layout_width="fill_parent" android:layout_height="fill_parent"
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:orientation="vertical" android:background="@drawable/wallpaper">
+	android:orientation="vertical">
 			<LinearLayout android:id="@+id/Linear09"
 				android:layout_width="fill_parent" android:layout_height="wrap_content"
 				android:orientation="horizontal" android:layout_gravity="center"
-				android:layout_marginBottom="15dip" android:background="@drawable/header">
+				android:background="@drawable/header">
 
 				<ImageView android:src="@drawable/icon"
 					android:adjustViewBounds="true" android:id="@+id/logo"
 					android:layout_height="40dip" android:scaleType="fitCenter"
 					android:layout_width="wrap_content" android:layout_marginBottom="1dip"
-					android:layout_marginTop="1dip"></ImageView>
+					android:layout_marginTop="1dip" android:layout_marginLeft="10dip"></ImageView>
 
 
 				<TextView android:id="@+id/tv" android:layout_width="wrap_content"
-					android:textSize="20sp" android:gravity="center" android:layout_height="fill_parent"
+					android:textSize="18sp" android:gravity="center" android:layout_height="fill_parent"
 					android:layout_marginLeft="5dip" android:shadowDx="1"
 					android:shadowDy="1" android:shadowRadius="2" android:text="@string/agame" android:shadowColor="#000000" android:textColor="#FFFFFF"></TextView>
 			</LinearLayout>
 
 	<ScrollView android:id="@+id/ScrollView01"
-		android:layout_width="fill_parent" android:layout_height="fill_parent">
+		android:layout_width="fill_parent" android:layout_height="fill_parent" android:background="@drawable/wallpaper">
 		<LinearLayout android:id="@+id/llb" android:layout_width="fill_parent"
 			xmlns:android="http://schemas.android.com/apk/res/android"
 			android:orientation="vertical" android:gravity="center"
@@ -32,7 +32,7 @@
 
 			<TableLayout android:id="@+id/Linear03"
 				android:layout_width="fill_parent" android:layout_height="fill_parent"
-				android:orientation="horizontal">
+				android:orientation="horizontal" android:layout_marginTop="10dip">
 
 				<TableRow android:layout_margin="5dip">
 

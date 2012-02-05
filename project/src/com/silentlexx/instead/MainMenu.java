@@ -23,7 +23,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -83,9 +82,15 @@ public class MainMenu extends ListActivity implements ViewBinder {
 			}
 		});
 		listView = getListView();
-		listView.setBackgroundColor(Color.BLACK);
-		listView.setBackgroundDrawable(this.getResources().getDrawable(
-				R.drawable.wallpaper));
+	//	listView.setBackgroundColor(Color.BLACK);
+	//	listView.setBackgroundDrawable(this.getResources().getDrawable(
+	//			R.drawable.wallpaper));
+/*		if(getResX()>480) {
+			LayoutParams layoutParams = new LayoutParams(480, 
+			        LayoutParams.FILL_PARENT);
+			listView.setLayoutParams(layoutParams);
+		}
+		*/
 		registerForContextMenu(listView);
 		showMenu();
 		if (!dwn) {
@@ -604,8 +609,8 @@ break;
 			theme = "theme = android-HVGA"+suff+BR;
 		} else
 		{
-			if (Build.VERSION.SDK_INT > 10 && Build.VERSION.SDK_INT < 14) {
-				theme = "theme = android-Honeycomb"+BR;
+			if (Build.VERSION.SDK_INT > 10 && getResX()>900 ) {
+				theme = "theme = android-Tablet"+BR;
 			} else {
 				theme = "theme = android-WxVGA"+suff+BR;
 			}
@@ -630,6 +635,12 @@ break;
 		}
 	}
 
+	private float getResX() {
+		Display display = getWindowManager().getDefaultDisplay();
+		return display.getWidth();
+		
+	}
+	
 	private void CreateRC() {
 		String path = Globals.getOutFilePath(Globals.Options);
 		if (!(new File(path)).exists()) {

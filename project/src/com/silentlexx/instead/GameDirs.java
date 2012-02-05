@@ -14,7 +14,6 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Intent.ShortcutIconResource;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.Html;
@@ -59,9 +58,6 @@ public class GameDirs extends ListActivity  implements ViewBinder  {
 		dialog.setCancelable(false);
         setContentView(R.layout.fghead);
         listView = getListView();
-		listView.setBackgroundColor(Color.BLACK);
-		listView.setBackgroundDrawable(this.getResources().getDrawable(
-				R.drawable.wallpaper));
 		registerForContextMenu(listView);
 		
 		lastGame = new LastGame(this);
